@@ -80,11 +80,16 @@
     padding:12px 14px;border-radius:12px;font-size:13px;}
   .pl-tab.pl-tab-active{background:var(--surface-2);}
   .pl-tab svg{width:20px;height:20px;}
-  .pl-screens{grid-area:content;padding:28px 40px 40px;max-width:680px;}
+  .pl-screens{grid-area:content;padding:28px 40px 40px;max-width:920px;}
   .pl-cardrow{overflow-x:visible;flex-wrap:wrap;}
-  .pl-statcard{flex:1 1 200px;}
-  .pl-summarygrid{grid-template-columns:repeat(4,1fr);}
+  .pl-statcard{flex:1 1 200px;box-shadow:0 6px 18px rgba(0,0,0,0.25);
+    border-left:3px solid var(--exercise);}
+  .pl-summarygrid{grid-template-columns:repeat(5,1fr);}
+  .pl-sumcell{box-shadow:0 6px 18px rgba(0,0,0,0.22);border-left:3px solid var(--stand);}
   .pl-detail-grid{grid-template-columns:repeat(4,1fr);}
+  .pl-detail-cell{box-shadow:0 4px 14px rgba(0,0,0,0.2);}
+  .pl-hist-item, .pl-heat-cell{transition:transform .12s ease;}
+  .pl-hist-item:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,0.25);}
 }
 .pl-h{font-family:var(--f-serif);font-style:italic;font-weight:600;font-size:15px;margin:22px 0 12px;
   color:var(--text-dim);letter-spacing:0.01em;}
@@ -251,6 +256,10 @@
           <div style="flex:1;"><label>활동 칼로리</label><input type="number" id="f-kcalact" placeholder="예: 118"></div>
           <div style="flex:1;"><label>총 칼로리</label><input type="number" id="f-kcaltotal" placeholder="예: 167"></div>
         </div>
+        <div class="pl-field" style="display:flex;gap:10px;">
+          <div style="flex:1;"><label>평균 속도 (km/h)</label><input type="number" step="0.1" id="f-speed" placeholder="예: 18.1"></div>
+          <div style="flex:1;"><label>거리 (km)</label><input type="number" step="0.01" id="f-distance" placeholder="예: 10.5"></div>
+        </div>
 
         <div class="pl-h">체감 강도 (RPE)</div>
         <div class="pl-range-row">
@@ -368,6 +377,8 @@ async function plSeedWeek(){
     const startMinute = Math.floor(Math.random()*30);
     const start = new Date(d); start.setHours(startHour, startMinute, 0, 0);
     const end = new Date(start.getTime()+duration*60000);
+    const avgSpeed = isWalkDay ? +(4.5+Math.random()*1.2).toFixed(1) : +(16+Math.random()*6).toFixed(1);
+    const distance = +(avgSpeed*duration/60).toFixed(1);
     sample.push({
       id: plUid(),
       date: plToISO(d),
@@ -379,6 +390,8 @@ async function plSeedWeek(){
       maxHr: maxHr,
       kcalActive: kcalActive,
       kcalTotal: kcalTotal,
+      avgSpeed: avgSpeed,
+      distance: distance,
       zones: zones,
       rpe: isWalkDay ? 3 : (5+Math.round(Math.random()*2)),
       memo: memos[dayIndex] || ''
@@ -537,6 +550,8 @@ function plResetForm(){
   document.getElementById('f-maxhr').value = '';
   document.getElementById('f-kcalact').value = '';
   document.getElementById('f-kcaltotal').value = '';
+  document.getElementById('f-speed').value = '';
+  document.getElementById('f-distance').value = '';
   document.getElementById('f-rpe').value = 5;
   plUpdateRpe();
   document.getElementById('f-memo').value = '';
@@ -569,6 +584,8 @@ function plStartEdit(id){
   document.getElementById('f-maxhr').value = w.maxHr!=null ? w.maxHr : '';
   document.getElementById('f-kcalact').value = w.kcalActive!=null ? w.kcalActive : '';
   document.getElementById('f-kcaltotal').value = w.kcalTotal!=null ? w.kcalTotal : '';
+  document.getElementById('f-speed').value = w.avgSpeed!=null ? w.avgSpeed : '';
+  document.getElementById('f-distance').value = w.distance!=null ? w.distance : '';
   document.getElementById('f-rpe').value = w.rpe || 5;
   plUpdateRpe();
   document.getElementById('f-memo').value = w.memo || '';
@@ -592,6 +609,8 @@ async function plSaveWorkout(){
   const maxHr = parseFloat(document.getElementById('f-maxhr').value);
   const kcalAct = parseFloat(document.getElementById('f-kcalact').value);
   const kcalTot = parseFloat(document.getElementById('f-kcaltotal').value);
+  const speed = parseFloat(document.getElementById('f-speed').value);
+  const distance = parseFloat(document.getElementById('f-distance').value);
 
   let existingZones = [0,0,0,0,0];
   let idToUse = plUid();
@@ -615,6 +634,8 @@ async function plSaveWorkout(){
     maxHr: isNaN(maxHr) ? null : maxHr,
     kcalActive: isNaN(kcalAct) ? null : kcalAct,
     kcalTotal: isNaN(kcalTot) ? null : kcalTot,
+    avgSpeed: isNaN(speed) ? null : speed,
+    distance: isNaN(distance) ? null : distance,
     zones: existingZones,
     rpe: parseInt(document.getElementById('f-rpe').value, 10),
     memo: document.getElementById('f-memo').value.trim()
@@ -775,7 +796,7 @@ function plRenderHistory(){
       '<div class="pl-hist-icon"><svg viewBox="0 0 24 24" stroke="var(--exercise)" fill="none" stroke-width="1.7"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.2 1 5.5 3.2C14.3 6 15.5 5 17.5 5 21 5 23.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg></div>'+
       '<div class="pl-hist-main"><div class="pl-hist-date">'+w.date+'</div><div class="pl-hist-type">'+w.type+'</div></div>'+
       '<div class="pl-hist-right"><div class="pl-hist-dur">'+w.duration.toFixed(1)+'분</div>'+
-      '<div class="pl-hist-hr">'+(w.avgHr?Math.round(w.avgHr)+' bpm':'-')+'</div></div></div>';
+      '<div class="pl-hist-hr">'+(w.avgHr?Math.round(w.avgHr)+' bpm':'-')+(w.distance!=null?' · '+w.distance.toFixed(1)+'km':'')+'</div></div></div>';
   }).join('');
 }
 
@@ -796,6 +817,8 @@ function plOpenDetail(id){
     '<div class="pl-detail-cell"><div class="pl-label">체감 강도</div><div class="pl-value">'+w.rpe+'/10</div></div>'+
     '<div class="pl-detail-cell"><div class="pl-label">활동 칼로리</div><div class="pl-value">'+(w.kcalActive?Math.round(w.kcalActive):'-')+'</div></div>'+
     '<div class="pl-detail-cell"><div class="pl-label">총 칼로리</div><div class="pl-value">'+(w.kcalTotal?Math.round(w.kcalTotal):'-')+'</div></div>'+
+    (w.distance!=null ? '<div class="pl-detail-cell"><div class="pl-label">거리</div><div class="pl-value">'+w.distance.toFixed(1)+'km</div></div>' : '')+
+    (w.avgSpeed!=null ? '<div class="pl-detail-cell"><div class="pl-label">평균 속도</div><div class="pl-value">'+w.avgSpeed.toFixed(1)+'km/h</div></div>' : '')+
     '</div>'+
     (w.memo ? '<div class="pl-memo-box">'+w.memo+'</div>' : '')+
     '<button type="button" class="pl-cta" style="margin-top:20px;margin-bottom:0;" onclick="plStartEdit(\''+id+'\')">수정하기</button>'+
@@ -855,11 +878,13 @@ function plRenderStats(){
   }
   const totalDur = filtered.reduce(function(a,w){ return a+w.duration; },0);
   const totalKcal = filtered.reduce(function(a,w){ return a+(w.kcalTotal||0); },0);
+  const totalDist = filtered.reduce(function(a,w){ return a+(w.distance||0); },0);
   const avgHrList = filtered.map(function(w){ return w.avgHr; }).filter(Boolean);
   const avgHr = avgHrList.length ? Math.round(plAvg(avgHrList)) : 0;
 
   document.getElementById('pl-summary-grid').innerHTML =
     '<div class="pl-sumcell"><div class="pl-label">총 시간</div><div class="pl-value">'+totalDur.toFixed(0)+'분</div></div>'+
+    '<div class="pl-sumcell"><div class="pl-label">총 거리</div><div class="pl-value">'+totalDist.toFixed(1)+'km</div></div>'+
     '<div class="pl-sumcell"><div class="pl-label">총 칼로리</div><div class="pl-value">'+totalKcal.toFixed(0)+'kcal</div></div>'+
     '<div class="pl-sumcell"><div class="pl-label">평균 심박수</div><div class="pl-value">'+(avgHr||'-')+'bpm</div></div>'+
     '<div class="pl-sumcell"><div class="pl-label">운동 횟수</div><div class="pl-value">'+filtered.length+'회</div></div>';
