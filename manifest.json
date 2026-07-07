@@ -1,0 +1,13 @@
+{
+  "name": "박동일지",
+  "short_name": "박동일지",
+  "description": "심박수로 보는 나의 운동 일지",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3ede1",
+  "theme_color": "#b3402c",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
