@@ -1,3 +1,5 @@
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#b3402c">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Caveat:wght@600;700&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -137,12 +139,14 @@
   color:var(--on-accent);font-weight:600;font-family:var(--f-body);font-size:15px;cursor:pointer;
   margin-top:6px;margin-bottom:20px;}
 .pl-cta:active{transform:scale(0.98);}
-.pl-field{margin-bottom:16px;}
-.pl-field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;}
-.pl-field input[type=text],.pl-field input[type=number],.pl-field input[type=date],.pl-field textarea{
-  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:11px 13px;color:var(--text);font-family:var(--f-mono);font-size:14px;}
-.pl-field textarea{font-family:var(--f-body);resize:vertical;min-height:60px;}
+.pl-field{margin-bottom:18px;}
+.pl-field label{display:block;font-family:var(--f-hand);font-size:15px;color:var(--text-dim);margin-bottom:2px;}
+.pl-field input[type=text],.pl-field input[type=number],.pl-field input[type=date],.pl-field input[type=time],.pl-field textarea{
+  width:100%;background:none;border:none;border-bottom:1.5px solid var(--border);border-radius:0;
+  padding:8px 2px;color:var(--text);font-family:var(--f-mono);font-size:15px;}
+.pl-field input:focus{outline:none;border-bottom-color:var(--exercise);}
+.pl-field textarea{font-family:var(--f-body);resize:vertical;min-height:56px;border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;}
 .pl-duration-display{font-family:var(--f-mono);font-size:13px;color:var(--exercise);
   margin:-6px 0 16px;font-weight:500;}
 .pl-chiprow{display:flex;gap:8px;flex-wrap:wrap;}
@@ -209,6 +213,12 @@
   border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:all .25s ease;z-index:30;
   max-width:82%;text-align:center;white-space:normal;}
 .pl-toast.pl-show{opacity:1;transform:translateX(-50%) translateY(0);}
+.pl-loading-spinner{position:absolute;inset:0;background:var(--bg);z-index:35;
+  display:flex;align-items:center;justify-content:center;}
+.pl-loading-spinner.pl-hide{display:none;}
+.pl-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--border);
+  border-top-color:var(--exercise);animation:plSpin .8s linear infinite;}
+@keyframes plSpin{to{transform:rotate(360deg);}}
 </style>
 
 <div class="pl-app">
@@ -247,6 +257,7 @@
         <div class="pl-h">트렌드</div>
         <div class="pl-cardrow" id="pl-cardrow"></div>
         <button class="pl-cta" onclick="plGoTab('add')">+ 기록 추가</button>
+        <button type="button" class="pl-seed-btn" style="width:100%;margin-bottom:20px;" onclick="plShareWeekImage()">이번 주 요약 이미지로 저장</button>
       </section>
 
       <section id="scr-add" class="pl-screen">
@@ -303,6 +314,8 @@
         </div>
         <div class="pl-summarygrid" id="pl-summary-grid"></div>
         <div id="pl-monthly-challenge"></div>
+        <div class="pl-h" style="margin-top:6px;">심박수·강도 추이</div>
+        <div id="pl-hr-trend-chart"></div>
         <div id="pl-stats-chart-area"></div>
         <div class="pl-h">최근 운동 평균 심박수 비교</div>
         <div id="pl-trend-rows"></div>
@@ -335,6 +348,7 @@
     </div>
 
     <div class="pl-toast" id="pl-toast"></div>
+    <div id="pl-loading-spinner" class="pl-loading-spinner pl-hide"><div class="pl-spinner"></div></div>
   </div>
 </div>
 
@@ -466,6 +480,8 @@ async function plCheckStorage(){
 }
 
 async function plLoad(){
+  const spinner = document.getElementById('pl-loading-spinner');
+  spinner.classList.remove('pl-hide');
   await plCheckStorage();
   try{
     const doc = await plDb.collection('logs').doc(PL_SYNC_CODE).get();
@@ -477,6 +493,7 @@ async function plLoad(){
   plRenderHome();
   plRenderHistory();
   plRenderStats();
+  spinner.classList.add('pl-hide');
 }
 
 async function plPersist(){
@@ -794,6 +811,61 @@ function plRenderHero(){
   '</div>';
 }
 
+async function plShareWeekImage(){
+  const today = new Date();
+  const weekStart = new Date(today); weekStart.setDate(today.getDate()-6);
+  const weekWorkouts = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=weekStart; });
+  const weekTotal = weekWorkouts.reduce(function(a,w){ return a+w.duration; },0);
+  const hrList = weekWorkouts.map(function(w){ return w.avgHr; }).filter(Boolean);
+  const avgHr = hrList.length ? Math.round(plAvg(hrList)) : null;
+  const streak = plComputeStreak();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 800; canvas.height = 1000;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f3ede1'; ctx.fillRect(0,0,800,1000);
+  ctx.fillStyle = '#b3402c';
+  ctx.font = 'italic 700 46px Georgia, serif';
+  ctx.fillText('박동일지', 60, 120);
+  ctx.fillStyle = '#6f6552';
+  ctx.font = '28px Georgia, serif';
+  ctx.fillText((today.getMonth()+1)+'월 '+today.getDate()+'일 기준 이번 주 요약', 60, 165);
+
+  ctx.strokeStyle = '#ddceb0'; ctx.lineWidth = 1;
+  ctx.setLineDash([6,6]);
+  ctx.beginPath(); ctx.moveTo(60,200); ctx.lineTo(740,200); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const rows = [
+    ['총 운동 시간', weekTotal.toFixed(0)+'분'],
+    ['평균 심박수', avgHr ? avgHr+' bpm' : '기록 없음'],
+    ['운동 횟수', weekWorkouts.length+'회'],
+    ['연속 기록', streak+'일']
+  ];
+  let y = 280;
+  rows.forEach(function(r){
+    ctx.fillStyle = '#6f6552'; ctx.font = '26px Georgia, serif';
+    ctx.fillText(r[0], 60, y);
+    ctx.fillStyle = '#241f18'; ctx.font = '700 44px Georgia, serif';
+    ctx.fillText(r[1], 60, y+50);
+    y += 130;
+  });
+  ctx.fillStyle = '#a89876'; ctx.font = '20px Georgia, serif';
+  ctx.fillText('심박수로 보는 나의 운동', 60, 950);
+
+  canvas.toBlob(async function(blob){
+    const file = new File([blob], '박동일지_주간요약.png', { type:'image/png' });
+    if(navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
+      try{ await navigator.share({ files:[file], title:'박동일지 주간 요약' }); return; }catch(e){}
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '박동일지_주간요약.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+}
+
 function plRenderCards(){
   const wrap = document.getElementById('pl-cardrow');
   const sorted = PL_WORKOUTS.slice().sort(function(a,b){ return a.date.localeCompare(b.date); });
@@ -861,12 +933,14 @@ function plRenderGoal(){
   const pct = Math.min(100, (total/PL_DAILY_GOAL_MIN*100));
   const achieved = total>=PL_DAILY_GOAL_MIN;
   const streak = plComputeStreak();
+  const encourage = (streak===0 && PL_WORKOUTS.length>0 && !achieved)
+    ? '<div class="pl-hero-tagline" style="margin-top:8px;font-size:16px;">어제는 쉬었네요, 오늘 다시 채워볼까요? 🙂</div>' : '';
   wrap.innerHTML =
     '<div class="pl-goalcard">'+
       '<div class="pl-goalbar"><span style="width:'+pct+'%;background:'+(achieved?'var(--exercise)':'var(--stand)')+'"></span></div>'+
       '<div class="pl-goal-row"><span>오늘 '+total.toFixed(0)+' / '+PL_DAILY_GOAL_MIN+'분'+(achieved?' ✅':'')+'</span>'+
       (streak>0?'<span class="pl-goal-streak">🔥 '+streak+'일 연속</span>':'')+
-      '</div>'+
+      '</div>'+encourage+
     '</div>';
 }
 
@@ -887,15 +961,23 @@ function plRenderHistory(){
   const sorted = PL_WORKOUTS.slice().sort(function(a,b){
     return (b.date.localeCompare(a.date)) || (b.id.localeCompare(a.id));
   });
-  wrap.innerHTML = sorted.map(function(w){
+  let html = '';
+  let lastMonthKey = null;
+  sorted.forEach(function(w){
     const d = plFromISO(w.date);
+    const monthKey = d.getFullYear()+'-'+d.getMonth();
+    if(monthKey!==lastMonthKey){
+      html += '<div class="pl-h" style="margin-top:'+(lastMonthKey===null?'6px':'28px')+';">'+d.getFullYear()+'년 '+(d.getMonth()+1)+'월</div>';
+      lastMonthKey = monthKey;
+    }
     const dateLabel = (d.getMonth()+1)+'/'+d.getDate()+'<br><span style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);font-weight:400;">'+wdLabels[d.getDay()]+'</span>';
-    return '<div class="pl-hist-item" onclick="plOpenDetail(\''+w.id+'\')">'+
+    html += '<div class="pl-hist-item" onclick="plOpenDetail(\''+w.id+'\')">'+
       '<div class="pl-hist-date">'+dateLabel+'</div>'+
       '<div class="pl-hist-main"><div class="pl-hist-type">'+w.type+'</div>'+
       '<div class="pl-hist-hr">'+(w.avgHr?Math.round(w.avgHr)+' bpm':'-')+(w.distance!=null?' · '+w.distance.toFixed(1)+'km':'')+'</div></div>'+
       '<div class="pl-hist-right"><div class="pl-hist-dur">'+w.duration.toFixed(1)+'분</div></div></div>';
-  }).join('');
+  });
+  wrap.innerHTML = html;
 }
 
 function plOpenDetail(id){
@@ -1001,6 +1083,7 @@ function plRenderStats(){
 
   const chartArea = document.getElementById('pl-stats-chart-area');
   chartArea.innerHTML = plCurrentPeriod==='week' ? plRenderWeekBarsHTML() : plRenderHeatmapHTML();
+  plRenderHrTrendChart();
   plRenderTrendRows();
 }
 
@@ -1059,6 +1142,34 @@ function plRenderHeatmapHTML(){
     '<span class="pl-legend-box" style="background:rgba(156,43,31,1);margin-left:8px;"></span>많이 탐</div>';
 }
 
+function plRenderHrTrendChart(){
+  const wrap = document.getElementById('pl-hr-trend-chart');
+  const recent = PL_WORKOUTS.slice().sort(function(a,b){ return a.date.localeCompare(b.date) || a.id.localeCompare(b.id); }).slice(-7);
+  const withHr = recent.filter(function(w){ return w.avgHr!=null; });
+  if(withHr.length<2){
+    wrap.innerHTML = '<div class="pl-empty" style="padding:20px 10px;">평균 심박수 기록이 2개 이상 쌓이면 추이가 보여요.</div>';
+    return;
+  }
+  const W=300,H=110,pad=18;
+  const hrs = withHr.map(function(w){ return w.avgHr; });
+  const minHr = Math.min.apply(null, hrs)-4, maxHr = Math.max.apply(null, hrs)+4;
+  const stepX = withHr.length>1 ? (W-pad*2)/(withHr.length-1) : 0;
+  function xAt(i){ return pad+i*stepX; }
+  function yAt(v){ return H-pad-((v-minHr)/(maxHr-minHr))*(H-pad*2); }
+  const points = withHr.map(function(w,i){ return xAt(i)+','+yAt(w.avgHr); }).join(' ');
+  const rpeColor = function(rpe){ return rpe>=8?PL_ZONE_HEX[4]:(rpe>=5?PL_ZONE_HEX[2]:PL_ZONE_HEX[0]); };
+  const dots = withHr.map(function(w,i){
+    const r = w.rpe ? 3+w.rpe*0.6 : 3;
+    return '<circle cx="'+xAt(i)+'" cy="'+yAt(w.avgHr)+'" r="'+r+'" fill="'+rpeColor(w.rpe||0)+'" stroke="var(--surface)" stroke-width="1.5"/>';
+  }).join('');
+  const svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:120px;">'+
+    '<polyline points="'+points+'" fill="none" stroke="var(--exercise)" stroke-width="2"/>'+
+    dots+'</svg>';
+  wrap.innerHTML = '<div class="pl-hero-card" style="display:block;">'+svg+
+    '<div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:4px;">'+
+    '<span>'+withHr[0].date+'</span><span>점 크기 = 체감강도(RPE)</span><span>'+withHr[withHr.length-1].date+'</span></div></div>';
+}
+
 function plRenderTrendRows(){
   const wrap = document.getElementById('pl-trend-rows');
   const recent = PL_WORKOUTS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).slice(0,6);
@@ -1093,4 +1204,10 @@ function plInit(){
 }
 
 plInit();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
 </script>
