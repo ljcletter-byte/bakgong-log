@@ -49,6 +49,8 @@
 .pl-topbar{padding:22px 22px 10px;}
 .pl-brand{font-family:var(--f-serif);font-style:italic;font-weight:700;font-size:26px;letter-spacing:-0.01em;color:var(--exercise);}
 .pl-tagline{font-family:var(--f-hand);font-size:16px;color:var(--text-dim);margin-top:0;}
+.pl-settings-btn{background:none;border:1px solid var(--border);border-radius:10px;
+  width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0;}
 .pl-screens{flex:1;overflow-y:auto;padding:4px 22px 110px;}
 .pl-screen{display:none;}
 .pl-screen.pl-active{display:block;animation:plFade .25s ease;}
@@ -223,9 +225,12 @@
 
 <div class="pl-app">
   <div class="pl-phone">
-    <div class="pl-topbar">
-      <div class="pl-brand">박동일지</div>
-      <div class="pl-tagline">심박수로 보는 나의 운동</div>
+    <div class="pl-topbar" style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div class="pl-brand">박동일지</div>
+        <div class="pl-tagline">심박수로 보는 나의 운동</div>
+      </div>
+      <button type="button" class="pl-settings-btn" onclick="plOpenSettings()">⚙️</button>
     </div>
     <div id="pl-storage-banner" class="pl-storage-banner" style="display:none;">
       클라우드 저장소에 연결할 수 없어요. 인터넷 연결을 확인해주세요. 기록이 새로고침 후 사라질 수 있어요.
@@ -258,6 +263,22 @@
         <div class="pl-cardrow" id="pl-cardrow"></div>
         <button class="pl-cta" onclick="plGoTab('add')">+ 기록 추가</button>
         <button type="button" class="pl-seed-btn" style="width:100%;margin-bottom:20px;" onclick="plShareWeekImage()">이번 주 요약 이미지로 저장</button>
+
+        <div class="pl-h">쿨다운·보완 운동 추천</div>
+        <div class="pl-hero-card" style="display:block;margin-bottom:20px;">
+          <div class="pl-hero-tagline" style="font-size:17px;">🧘 라이딩 후 스트레칭</div>
+          <div class="pl-hero-meta" style="margin-top:10px;line-height:1.9;">
+            · 고관절 굴곡근: 런지 자세 15~30초, 좌우<br>
+            · 대퇴사두근: 서서 발목 당기기 15~30초, 좌우<br>
+            · 햄스트링: 다리 뻗고 상체 숙이기 15~30초<br>
+            · 종아리: 벽 짚고 뒤꿈치 눌러주기 15~30초
+          </div>
+          <div class="pl-hero-tagline" style="font-size:17px;margin-top:18px;">💪 페달링 보완 근력 (주 2~3회)</div>
+          <div class="pl-hero-meta" style="margin-top:10px;line-height:1.9;">
+            · 스쿼트 · 런지 · 힙 쓰러스트 · 플랭크
+          </div>
+          <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:14px;">일반적인 가이드예요. 통증이 있다면 전문가와 상담하세요.</div>
+        </div>
       </section>
 
       <section id="scr-add" class="pl-screen">
@@ -314,7 +335,9 @@
         </div>
         <div class="pl-summarygrid" id="pl-summary-grid"></div>
         <div id="pl-monthly-challenge"></div>
-        <div class="pl-h" style="margin-top:6px;">심박수·강도 추이</div>
+        <div class="pl-h" style="margin-top:6px;">이번 달 vs 지난달</div>
+        <div id="pl-month-compare"></div>
+        <div class="pl-h">심박수·강도 추이</div>
         <div id="pl-hr-trend-chart"></div>
         <div id="pl-stats-chart-area"></div>
         <div class="pl-h">최근 운동 평균 심박수 비교</div>
@@ -345,6 +368,16 @@
     <div id="pl-detail-overlay" class="pl-overlay">
       <div class="pl-overlay-close" onclick="plCloseDetail()">&times;</div>
       <div id="pl-detail-content"></div>
+    </div>
+
+    <div id="pl-settings-overlay" class="pl-overlay">
+      <div class="pl-overlay-close" onclick="plCloseSettings()">&times;</div>
+      <div class="pl-h" style="margin-top:6px;">목표 설정</div>
+      <div class="pl-field"><label>일일 목표 운동시간 (분)</label><input type="number" id="s-daily-min" step="5"></div>
+      <div class="pl-field"><label>월간 목표 일수 (일)</label><input type="number" id="s-monthly-days" step="1"></div>
+      <div class="pl-field"><label>주간 누적 목표 (분)</label><input type="number" id="s-weekly-min" step="10"></div>
+      <div class="pl-field"><label>월간 목표 거리 (km)</label><input type="number" id="s-monthly-km" step="5"></div>
+      <button type="button" class="pl-cta" onclick="plSaveSettings()">저장</button>
     </div>
 
     <div class="pl-toast" id="pl-toast"></div>
@@ -486,6 +519,9 @@ async function plLoad(){
   try{
     const doc = await plDb.collection('logs').doc(PL_SYNC_CODE).get();
     PL_WORKOUTS = (doc.exists && doc.data().workoutsJson) ? JSON.parse(doc.data().workoutsJson) : [];
+    if(doc.exists && doc.data().settingsJson){
+      try{ PL_SETTINGS = Object.assign({}, PL_SETTINGS, JSON.parse(doc.data().settingsJson)); }catch(e2){}
+    }
   }catch(e){
     console.error('load failed', e);
     PL_WORKOUTS = [];
@@ -544,6 +580,7 @@ function plParseTimeToMinutes(str){
 function plToHHMMSS(d){
   return plPad(d.getHours())+':'+plPad(d.getMinutes())+':'+plPad(d.getSeconds());
 }
+
 
 function plComputeDuration(){
   const sVal = document.getElementById('f-start').value;
@@ -905,8 +942,42 @@ function plRenderCards(){
     '<div class="pl-delta">꾸준함이 핵심이에요</div></div>';
 }
 
-const PL_DAILY_GOAL_MIN = 30;
-const PL_MONTHLY_GOAL_COUNT = 12;
+let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50 };
+
+function plOpenSettings(){
+  document.getElementById('s-daily-min').value = PL_SETTINGS.dailyGoal;
+  document.getElementById('s-monthly-days').value = PL_SETTINGS.monthlyGoalDays;
+  document.getElementById('s-weekly-min').value = PL_SETTINGS.weeklyGoalMin;
+  document.getElementById('s-monthly-km').value = PL_SETTINGS.monthlyGoalKm;
+  document.getElementById('pl-settings-overlay').classList.add('pl-show');
+}
+
+function plCloseSettings(){
+  document.getElementById('pl-settings-overlay').classList.remove('pl-show');
+}
+
+async function plSaveSettings(){
+  const daily = parseFloat(document.getElementById('s-daily-min').value);
+  const monthDays = parseFloat(document.getElementById('s-monthly-days').value);
+  const weekly = parseFloat(document.getElementById('s-weekly-min').value);
+  const monthKm = parseFloat(document.getElementById('s-monthly-km').value);
+  PL_SETTINGS = {
+    dailyGoal: (!isNaN(daily) && daily>0) ? daily : PL_SETTINGS.dailyGoal,
+    monthlyGoalDays: (!isNaN(monthDays) && monthDays>0) ? monthDays : PL_SETTINGS.monthlyGoalDays,
+    weeklyGoalMin: (!isNaN(weekly) && weekly>0) ? weekly : PL_SETTINGS.weeklyGoalMin,
+    monthlyGoalKm: (!isNaN(monthKm) && monthKm>0) ? monthKm : PL_SETTINGS.monthlyGoalKm
+  };
+  try{
+    await plDb.collection('logs').doc(PL_SYNC_CODE).set({
+      settingsJson: JSON.stringify(PL_SETTINGS),
+      workoutsJson: JSON.stringify(PL_WORKOUTS)
+    }, { merge:true });
+  }catch(e){ console.error('settings save failed', e); }
+  plCloseSettings();
+  plRenderHome();
+  plRenderStats();
+  plToast('목표를 저장했어요');
+}
 
 function plDayTotalMin(iso){
   return PL_WORKOUTS.filter(function(w){ return w.date===iso; }).reduce(function(a,w){ return a+w.duration; },0);
@@ -917,7 +988,7 @@ function plComputeStreak(){
   for(let i=0;i<400;i++){
     const d = new Date(); d.setDate(d.getDate()-i);
     const total = plDayTotalMin(plToISO(d));
-    const achieved = total>=PL_DAILY_GOAL_MIN;
+    const achieved = total>=PL_SETTINGS.dailyGoal;
     if(i===0){
       if(achieved) streak++;
     } else {
@@ -930,17 +1001,27 @@ function plComputeStreak(){
 function plRenderGoal(){
   const wrap = document.getElementById('pl-goal-wrap');
   const total = plDayTotalMin(plToday());
-  const pct = Math.min(100, (total/PL_DAILY_GOAL_MIN*100));
-  const achieved = total>=PL_DAILY_GOAL_MIN;
+  const pct = Math.min(100, (total/PL_SETTINGS.dailyGoal*100));
+  const achieved = total>=PL_SETTINGS.dailyGoal;
   const streak = plComputeStreak();
   const encourage = (streak===0 && PL_WORKOUTS.length>0 && !achieved)
     ? '<div class="pl-hero-tagline" style="margin-top:8px;font-size:16px;">어제는 쉬었네요, 오늘 다시 채워볼까요? 🙂</div>' : '';
+
+  const today = new Date();
+  const weekStart = new Date(today); weekStart.setDate(today.getDate()-6);
+  const weekTotal = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=weekStart; })
+    .reduce(function(a,w){ return a+w.duration; },0);
+  const weekPct = Math.min(100, (weekTotal/PL_SETTINGS.weeklyGoalMin*100));
+  const weekAchieved = weekTotal>=PL_SETTINGS.weeklyGoalMin;
+
   wrap.innerHTML =
     '<div class="pl-goalcard">'+
       '<div class="pl-goalbar"><span style="width:'+pct+'%;background:'+(achieved?'var(--exercise)':'var(--stand)')+'"></span></div>'+
-      '<div class="pl-goal-row"><span>오늘 '+total.toFixed(0)+' / '+PL_DAILY_GOAL_MIN+'분'+(achieved?' ✅':'')+'</span>'+
+      '<div class="pl-goal-row"><span>오늘 '+total.toFixed(0)+' / '+PL_SETTINGS.dailyGoal+'분'+(achieved?' ✅':'')+'</span>'+
       (streak>0?'<span class="pl-goal-streak">🔥 '+streak+'일 연속</span>':'')+
       '</div>'+encourage+
+      '<div class="pl-goalbar" style="margin-top:14px;"><span style="width:'+weekPct+'%;background:'+(weekAchieved?'var(--exercise)':'var(--stand)')+'"></span></div>'+
+      '<div class="pl-goal-row"><span>이번 주 '+weekTotal.toFixed(0)+' / '+PL_SETTINGS.weeklyGoalMin+'분'+(weekAchieved?' ✅':'')+'</span></div>'+
     '</div>';
 }
 
@@ -1070,12 +1151,15 @@ function plRenderStats(){
   if(plCurrentPeriod==='month'){
     const uniqueDates = {};
     filtered.forEach(function(w){ uniqueDates[w.date] = (uniqueDates[w.date]||0)+w.duration; });
-    const achievedDays = Object.keys(uniqueDates).filter(function(d){ return uniqueDates[d]>=PL_DAILY_GOAL_MIN; }).length;
-    const pct = Math.min(100, achievedDays/PL_MONTHLY_GOAL_COUNT*100);
+    const achievedDays = Object.keys(uniqueDates).filter(function(d){ return uniqueDates[d]>=PL_SETTINGS.dailyGoal; }).length;
+    const pct = Math.min(100, achievedDays/PL_SETTINGS.monthlyGoalDays*100);
+    const distPct = Math.min(100, totalDist/PL_SETTINGS.monthlyGoalKm*100);
     challengeEl.innerHTML =
       '<div class="pl-goalcard" style="margin-top:2px;margin-bottom:20px;">'+
-      '<div class="pl-goal-row" style="margin-bottom:8px;"><span>이번 달 목표 (30분 이상 운동일)</span><span>'+achievedDays+' / '+PL_MONTHLY_GOAL_COUNT+'일</span></div>'+
+      '<div class="pl-goal-row" style="margin-bottom:8px;"><span>이번 달 목표 ('+PL_SETTINGS.dailyGoal+'분 이상 운동일)</span><span>'+achievedDays+' / '+PL_SETTINGS.monthlyGoalDays+'일</span></div>'+
       '<div class="pl-goalbar"><span style="width:'+pct+'%;background:var(--exercise)"></span></div>'+
+      '<div class="pl-goal-row" style="margin-top:14px;margin-bottom:8px;"><span>이번 달 거리 목표</span><span>'+totalDist.toFixed(1)+' / '+PL_SETTINGS.monthlyGoalKm+'km</span></div>'+
+      '<div class="pl-goalbar"><span style="width:'+distPct+'%;background:var(--stand)"></span></div>'+
       '</div>';
   } else {
     challengeEl.innerHTML = '';
@@ -1083,6 +1167,7 @@ function plRenderStats(){
 
   const chartArea = document.getElementById('pl-stats-chart-area');
   chartArea.innerHTML = plCurrentPeriod==='week' ? plRenderWeekBarsHTML() : plRenderHeatmapHTML();
+  plRenderMonthCompare();
   plRenderHrTrendChart();
   plRenderTrendRows();
 }
@@ -1140,6 +1225,56 @@ function plRenderHeatmapHTML(){
     '<div class="pl-heat-legend"><span class="pl-legend-box" style="background:var(--surface)"></span>없음'+
     '<span class="pl-legend-box" style="background:rgba(156,43,31,0.5);margin-left:8px;"></span>보통'+
     '<span class="pl-legend-box" style="background:rgba(156,43,31,1);margin-left:8px;"></span>많이 탐</div>';
+}
+
+function plRenderMonthCompare(){
+  const wrap = document.getElementById('pl-month-compare');
+  const today = new Date();
+  const thisYm = { y: today.getFullYear(), m: today.getMonth() };
+  const lastMonthDate = new Date(today.getFullYear(), today.getMonth()-1, 1);
+  const lastYm = { y: lastMonthDate.getFullYear(), m: lastMonthDate.getMonth() };
+
+  function statsFor(ym){
+    const list = PL_WORKOUTS.filter(function(w){
+      const d = plFromISO(w.date);
+      return d.getFullYear()===ym.y && d.getMonth()===ym.m;
+    });
+    const hrs = list.map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
+    const effList = list.filter(function(w){ return w.avgSpeed!=null && w.avgHr; })
+      .map(function(w){ return w.avgSpeed/w.avgHr; });
+    return {
+      count: list.length,
+      avgHr: hrs.length ? plAvg(hrs) : null,
+      eff: effList.length ? plAvg(effList) : null
+    };
+  }
+
+  const cur = statsFor(thisYm);
+  const prev = statsFor(lastYm);
+
+  if(cur.count===0 || prev.count===0){
+    wrap.innerHTML = '<div class="pl-empty" style="padding:16px 10px;">두 달치 기록이 쌓이면 비교 분석이 나타나요.</div>';
+    return;
+  }
+
+  const lines = [];
+  if(cur.eff!=null && prev.eff!=null){
+    const pct = ((cur.eff-prev.eff)/prev.eff*100);
+    if(pct>3) lines.push('심박 효율이 지난달보다 '+pct.toFixed(0)+'% 좋아졌어요 🎉 같은 심박수로 더 빠르게 타고 있어요.');
+    else if(pct<-3) lines.push('심박 효율이 지난달보다 '+Math.abs(pct).toFixed(0)+'% 낮아졌어요. 컨디션을 살펴보세요.');
+    else lines.push('심박 효율이 지난달과 비슷한 수준을 유지하고 있어요.');
+  }
+  if(cur.avgHr!=null && prev.avgHr!=null){
+    const diff = cur.avgHr - prev.avgHr;
+    if(Math.abs(diff)>=2){
+      lines.push('평균 심박수가 지난달보다 '+(diff>0?'+':'')+diff.toFixed(0)+'bpm '+(diff<0?'낮아졌어요.':'높아졌어요.'));
+    }
+  }
+  if(lines.length===0) lines.push('꾸준히 비슷한 페이스를 유지하고 있어요.');
+
+  wrap.innerHTML = '<div class="pl-hero-card" style="display:block;">'+
+    lines.map(function(l){ return '<div class="pl-hero-tagline" style="font-size:17px;margin-top:2px;">'+l+'</div>'; }).join('')+
+  '</div>';
 }
 
 function plRenderHrTrendChart(){
