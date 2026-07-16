@@ -119,9 +119,9 @@
 .pl-ring-center .pl-sub{font-family:var(--f-mono);font-size:11px;color:var(--text-dim);margin-top:2px;}
 .pl-cardrow{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;}
 .pl-statcard{flex:0 0 136px;background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius-md);padding:14px;}
-.pl-statcard .pl-label{font-size:11px;color:var(--text-dim);}
-.pl-statcard .pl-value{font-family:var(--f-display);font-weight:700;font-size:21px;margin-top:6px;}
+  border-radius:var(--radius-md);padding:14px;box-shadow:0 3px 10px rgba(66,50,26,0.06);}
+.pl-statcard .pl-label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
+.pl-statcard .pl-value{font-family:var(--f-display);font-weight:700;font-size:21px;margin-top:8px;}
 .pl-statcard .pl-delta{font-family:var(--f-mono);font-size:10px;margin-top:5px;color:var(--text-faint);}
 .pl-delta.pl-up{color:var(--danger);}
 .pl-delta.pl-down{color:var(--stand);}
@@ -189,9 +189,11 @@
   border-radius:10px;font-size:13px;cursor:pointer;font-family:var(--f-body);}
 .pl-toggle button.pl-sel{background:var(--surface-2);color:var(--text);font-weight:600;}
 .pl-summarygrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
-.pl-sumcell{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;}
-.pl-sumcell .pl-label{font-size:11px;color:var(--text-dim);}
-.pl-sumcell .pl-value{font-family:var(--f-display);font-weight:700;font-size:19px;margin-top:6px;}
+.pl-sumcell{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;
+  box-shadow:0 3px 10px rgba(66,50,26,0.06);}
+.pl-sumcell .pl-label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.06em;
+  font-family:var(--f-body);font-weight:600;display:flex;align-items:center;gap:5px;}
+.pl-sumcell .pl-value{font-family:var(--f-display);font-weight:700;font-size:22px;margin-top:8px;color:var(--text);}
 .pl-heat-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
 .pl-heat-cell{aspect-ratio:1;border-radius:6px;background:var(--surface);display:flex;
   align-items:center;justify-content:center;font-size:9px;color:var(--text-faint);font-family:var(--f-mono);}
@@ -931,13 +933,13 @@ function plRenderCards(){
   }
 
   wrap.innerHTML =
-    '<div class="pl-statcard"><div class="pl-label">최근 평균 심박수</div>'+
+    '<div class="pl-statcard"><div class="pl-label">❤️ 최근 평균 심박수</div>'+
     '<div class="pl-value">'+(avgLast?Math.round(avgLast):'--')+'<span style="font-size:12px;"> bpm</span></div>'+
     deltaHtml+'</div>'+
-    '<div class="pl-statcard"><div class="pl-label">이번 주 총 시간</div>'+
+    '<div class="pl-statcard"><div class="pl-label">⏱ 이번 주 총 시간</div>'+
     '<div class="pl-value">'+weekTotal.toFixed(0)+'<span style="font-size:12px;"> 분</span></div>'+
     '<div class="pl-delta">최근 7일 합산</div></div>'+
-    '<div class="pl-statcard"><div class="pl-label">이번 달 운동 횟수</div>'+
+    '<div class="pl-statcard"><div class="pl-label">🚴 이번 달 운동 횟수</div>'+
     '<div class="pl-value">'+monthCount+'<span style="font-size:12px;"> 회</span></div>'+
     '<div class="pl-delta">꾸준함이 핵심이에요</div></div>';
 }
@@ -1141,11 +1143,11 @@ function plRenderStats(){
   const avgHr = avgHrList.length ? Math.round(plAvg(avgHrList)) : 0;
 
   document.getElementById('pl-summary-grid').innerHTML =
-    '<div class="pl-sumcell"><div class="pl-label">총 시간</div><div class="pl-value">'+totalDur.toFixed(0)+'분</div></div>'+
-    '<div class="pl-sumcell"><div class="pl-label">총 거리</div><div class="pl-value">'+totalDist.toFixed(1)+'km</div></div>'+
-    '<div class="pl-sumcell"><div class="pl-label">총 칼로리</div><div class="pl-value">'+totalKcal.toFixed(0)+'kcal</div></div>'+
-    '<div class="pl-sumcell"><div class="pl-label">평균 심박수</div><div class="pl-value">'+(avgHr||'-')+'bpm</div></div>'+
-    '<div class="pl-sumcell"><div class="pl-label">운동 횟수</div><div class="pl-value">'+filtered.length+'회</div></div>';
+    '<div class="pl-sumcell"><div class="pl-label">⏱ 총 시간</div><div class="pl-value">'+totalDur.toFixed(0)+'<span style="font-size:13px;"> 분</span></div></div>'+
+    '<div class="pl-sumcell"><div class="pl-label">📍 총 거리</div><div class="pl-value">'+totalDist.toFixed(1)+'<span style="font-size:13px;"> km</span></div></div>'+
+    '<div class="pl-sumcell"><div class="pl-label">🔥 총 칼로리</div><div class="pl-value">'+totalKcal.toFixed(0)+'<span style="font-size:13px;"> kcal</span></div></div>'+
+    '<div class="pl-sumcell"><div class="pl-label">❤️ 평균 심박수</div><div class="pl-value">'+(avgHr||'-')+'<span style="font-size:13px;"> bpm</span></div></div>'+
+    '<div class="pl-sumcell"><div class="pl-label">🚴 운동 횟수</div><div class="pl-value">'+filtered.length+'<span style="font-size:13px;"> 회</span></div></div>';
 
   const challengeEl = document.getElementById('pl-monthly-challenge');
   if(plCurrentPeriod==='month'){
@@ -1285,24 +1287,38 @@ function plRenderHrTrendChart(){
     wrap.innerHTML = '<div class="pl-empty" style="padding:20px 10px;">평균 심박수 기록이 2개 이상 쌓이면 추이가 보여요.</div>';
     return;
   }
-  const W=300,H=110,pad=18;
+  const W=320,H=140,padL=8,padR=8,padT=14,padB=14;
   const hrs = withHr.map(function(w){ return w.avgHr; });
   const minHr = Math.min.apply(null, hrs)-4, maxHr = Math.max.apply(null, hrs)+4;
-  const stepX = withHr.length>1 ? (W-pad*2)/(withHr.length-1) : 0;
-  function xAt(i){ return pad+i*stepX; }
-  function yAt(v){ return H-pad-((v-minHr)/(maxHr-minHr))*(H-pad*2); }
+  const stepX = withHr.length>1 ? (W-padL-padR)/(withHr.length-1) : 0;
+  function xAt(i){ return padL+i*stepX; }
+  function yAt(v){ return H-padB-((v-minHr)/(maxHr-minHr))*(H-padT-padB); }
   const points = withHr.map(function(w,i){ return xAt(i)+','+yAt(w.avgHr); }).join(' ');
+  const areaPath = 'M'+xAt(0)+','+(H-padB)+' L'+points.split(' ').join(' L')+' L'+xAt(withHr.length-1)+','+(H-padB)+' Z';
   const rpeColor = function(rpe){ return rpe>=8?PL_ZONE_HEX[4]:(rpe>=5?PL_ZONE_HEX[2]:PL_ZONE_HEX[0]); };
+  const gridLines = [0.25,0.5,0.75].map(function(f){
+    const y = padT+(H-padT-padB)*f;
+    return '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,4"/>';
+  }).join('');
   const dots = withHr.map(function(w,i){
-    const r = w.rpe ? 3+w.rpe*0.6 : 3;
+    const r = w.rpe ? 3+w.rpe*0.55 : 3;
     return '<circle cx="'+xAt(i)+'" cy="'+yAt(w.avgHr)+'" r="'+r+'" fill="'+rpeColor(w.rpe||0)+'" stroke="var(--surface)" stroke-width="1.5"/>';
   }).join('');
-  const svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:120px;">'+
-    '<polyline points="'+points+'" fill="none" stroke="var(--exercise)" stroke-width="2"/>'+
-    dots+'</svg>';
-  wrap.innerHTML = '<div class="pl-hero-card" style="display:block;">'+svg+
-    '<div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:4px;">'+
-    '<span>'+withHr[0].date+'</span><span>점 크기 = 체감강도(RPE)</span><span>'+withHr[withHr.length-1].date+'</span></div></div>';
+  const svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:150px;">'+
+    '<defs><linearGradient id="plHrGrad" x1="0" y1="0" x2="0" y2="1">'+
+    '<stop offset="0%" stop-color="var(--exercise)" stop-opacity="0.28"/>'+
+    '<stop offset="100%" stop-color="var(--exercise)" stop-opacity="0"/>'+
+    '</linearGradient></defs>'+
+    gridLines+
+    '<path d="'+areaPath+'" fill="url(#plHrGrad)"/>'+
+    '<polyline points="'+points+'" fill="none" stroke="var(--exercise)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'+
+    dots+
+    '<text x="'+xAt(0)+'" y="'+(yAt(withHr[0].avgHr)-10)+'" font-size="11" fill="var(--text-dim)" font-family="JetBrains Mono, monospace">'+Math.round(withHr[0].avgHr)+'</text>'+
+    '<text x="'+xAt(withHr.length-1)+'" y="'+(yAt(withHr[withHr.length-1].avgHr)-10)+'" font-size="11" fill="var(--text-dim)" font-family="JetBrains Mono, monospace" text-anchor="end">'+Math.round(withHr[withHr.length-1].avgHr)+'</text>'+
+    '</svg>';
+  wrap.innerHTML = '<div class="pl-hero-card" style="display:block;padding-bottom:14px;">'+svg+
+    '<div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:2px;">'+
+    '<span>'+withHr[0].date+'</span><span>● 점 크기 = 체감강도(RPE)</span><span>'+withHr[withHr.length-1].date+'</span></div></div>';
 }
 
 function plRenderTrendRows(){
