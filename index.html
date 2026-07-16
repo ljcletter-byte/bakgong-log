@@ -1,26 +1,26 @@
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#b3402c">
+<meta name="theme-color" content="#3aa655">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Caveat:wght@600;700&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 .pl-app{
-  --bg:#f3ede1;
-  --surface:#fffdf8;
-  --surface-2:#eae1cd;
-  --border:#ddceb0;
-  --text:#241f18;
-  --text-dim:#6f6552;
-  --text-faint:#a89876;
-  --zone1:#3f6b52;
-  --zone2:#5c8a4f;
-  --zone3:#b3812e;
-  --zone4:#a24a2c;
-  --zone5:#9c2b1f;
-  --move:#9c2b1f;
-  --exercise:#b3402c;
-  --stand:#3f6b52;
-  --danger:#8a3226;
-  --on-accent:#fbf5e8;
+  --bg:#f6fbef;
+  --surface:#ffffff;
+  --surface-2:#e9f5df;
+  --border:#d3ecc6;
+  --text:#1f3320;
+  --text-dim:#5c7a5a;
+  --text-faint:#95b592;
+  --zone1:#2f9bd6;
+  --zone2:#1fa6a0;
+  --zone3:#4caf50;
+  --zone4:#f2a71b;
+  --zone5:#ef5b52;
+  --move:#f2a71b;
+  --exercise:#3aa655;
+  --stand:#2f9bd6;
+  --danger:#e35446;
+  --on-accent:#f5fff2;
   --radius-lg:18px;
   --radius-md:14px;
   --radius-sm:10px;
@@ -30,7 +30,7 @@
   --f-body:'Inter',sans-serif;
   --f-mono:'JetBrains Mono',monospace;
   font-family:var(--f-body);
-  background:#e7ddc8;
+  background:#e2f2d8;
   min-height:100vh;
   display:flex;
   justify-content:center;
@@ -46,9 +46,9 @@
 }
 .pl-phone::before,.pl-phone::after{content:'';position:absolute;border-radius:50%;
   filter:blur(46px);z-index:-1;pointer-events:none;}
-.pl-phone::before{width:280px;height:280px;background:rgba(179,64,44,0.16);top:-70px;right:-80px;}
-.pl-phone::after{width:240px;height:240px;background:rgba(63,107,82,0.14);bottom:140px;left:-90px;}
-.pl-storage-banner{background:rgba(138,50,38,0.1);color:var(--danger);font-size:11px;
+.pl-phone::before{width:280px;height:280px;background:rgba(58,166,85,0.16);top:-70px;right:-80px;}
+.pl-phone::after{width:240px;height:240px;background:rgba(47,155,214,0.14);bottom:140px;left:-90px;}
+.pl-storage-banner{background:rgba(227,84,70,0.1);color:var(--danger);font-size:11px;
   line-height:1.5;padding:9px 14px;margin:0 22px 6px;border-radius:12px;font-family:var(--f-mono);}
 .pl-topbar{padding:22px 22px 10px;}
 .pl-brand{font-family:var(--f-serif);font-style:italic;font-weight:700;font-size:26px;letter-spacing:-0.01em;color:var(--exercise);}
@@ -144,8 +144,8 @@
 .pl-seed-btn{padding:10px 18px;border-radius:14px;border:1px solid var(--border);
   background:var(--surface-2);color:var(--stand);font-size:12px;cursor:pointer;font-family:var(--f-body);}
 .pl-cta{width:100%;padding:15px;border-radius:22px 14px 20px 14px;border:none;
-  background:linear-gradient(135deg,#c9613f,var(--exercise) 60%,#8f3222);
-  box-shadow:0 6px 16px rgba(179,64,44,0.28);
+  background:linear-gradient(135deg,#5fc97a,var(--exercise) 60%,#2d8a45);
+  box-shadow:0 6px 16px rgba(58,166,85,0.28);
   color:var(--on-accent);font-weight:600;font-family:var(--f-body);font-size:15px;cursor:pointer;
   margin-top:6px;margin-bottom:20px;}
 .pl-cta:active{transform:scale(0.98);}
@@ -409,7 +409,7 @@ const PL_FIREBASE_CONFIG = {
 };
 firebase.initializeApp(PL_FIREBASE_CONFIG);
 const plDb = firebase.firestore();
-const PL_ZONE_HEX = ['#3f6b52','#5c8a4f','#b3812e','#a24a2c','#9c2b1f'];
+const PL_ZONE_HEX = ['#2f9bd6','#1fa6a0','#4caf50','#f2a71b','#ef5b52'];
 const PL_TYPES = ['실내자전거','러닝','걷기','기타'];
 let PL_WORKOUTS = [];
 let plSelectedType = null;
@@ -873,15 +873,15 @@ async function plShareWeekImage(){
   const canvas = document.createElement('canvas');
   canvas.width = 800; canvas.height = 1000;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#f3ede1'; ctx.fillRect(0,0,800,1000);
-  ctx.fillStyle = '#b3402c';
+  ctx.fillStyle = '#f6fbef'; ctx.fillRect(0,0,800,1000);
+  ctx.fillStyle = '#3aa655';
   ctx.font = 'italic 700 46px Georgia, serif';
   ctx.fillText('박동일지', 60, 120);
-  ctx.fillStyle = '#6f6552';
+  ctx.fillStyle = '#5c7a5a';
   ctx.font = '28px Georgia, serif';
   ctx.fillText((today.getMonth()+1)+'월 '+today.getDate()+'일 기준 이번 주 요약', 60, 165);
 
-  ctx.strokeStyle = '#ddceb0'; ctx.lineWidth = 1;
+  ctx.strokeStyle = '#d3ecc6'; ctx.lineWidth = 1;
   ctx.setLineDash([6,6]);
   ctx.beginPath(); ctx.moveTo(60,200); ctx.lineTo(740,200); ctx.stroke();
   ctx.setLineDash([]);
@@ -894,13 +894,13 @@ async function plShareWeekImage(){
   ];
   let y = 280;
   rows.forEach(function(r){
-    ctx.fillStyle = '#6f6552'; ctx.font = '26px Georgia, serif';
+    ctx.fillStyle = '#5c7a5a'; ctx.font = '26px Georgia, serif';
     ctx.fillText(r[0], 60, y);
-    ctx.fillStyle = '#241f18'; ctx.font = '700 44px Georgia, serif';
+    ctx.fillStyle = '#1f3320'; ctx.font = '700 44px Georgia, serif';
     ctx.fillText(r[1], 60, y+50);
     y += 130;
   });
-  ctx.fillStyle = '#a89876'; ctx.font = '20px Georgia, serif';
+  ctx.fillStyle = '#95b592'; ctx.font = '20px Georgia, serif';
   ctx.fillText('심박수로 보는 나의 운동', 60, 950);
 
   canvas.toBlob(async function(blob){
@@ -1228,7 +1228,7 @@ function plRenderHeatmapHTML(){
   for(let day=1;day<=daysInMonth;day++){
     const dur = dayDur[day]||0;
     const alpha = dur>0 ? (0.25 + 0.75*(dur/maxDur)) : 0;
-    const bg = dur>0 ? ('rgba(156,43,31,'+alpha.toFixed(2)+')') : 'var(--surface)';
+    const bg = dur>0 ? ('rgba(242,167,27,'+alpha.toFixed(2)+')') : 'var(--surface)';
     const color = (dur>0 && alpha>0.5) ? 'var(--on-accent)' : 'var(--text-faint)';
     const iso = plToISO(new Date(y,m,day));
     const clickAttr = dur>0 ? ' onclick="plOpenDayDetail(\''+iso+'\')" style="background:'+bg+';color:'+color+';cursor:pointer;"' : ' style="background:'+bg+';color:'+color+';"';
@@ -1236,8 +1236,8 @@ function plRenderHeatmapHTML(){
   }
   return '<div class="pl-heat-grid">'+cells+'</div>'+
     '<div class="pl-heat-legend"><span class="pl-legend-box" style="background:var(--surface)"></span>없음'+
-    '<span class="pl-legend-box" style="background:rgba(156,43,31,0.5);margin-left:8px;"></span>보통'+
-    '<span class="pl-legend-box" style="background:rgba(156,43,31,1);margin-left:8px;"></span>많이 탐</div>';
+    '<span class="pl-legend-box" style="background:rgba(242,167,27,0.5);margin-left:8px;"></span>보통'+
+    '<span class="pl-legend-box" style="background:rgba(242,167,27,1);margin-left:8px;"></span>많이 탐</div>';
 }
 
 function plRenderMonthCompare(){
