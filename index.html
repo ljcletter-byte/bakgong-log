@@ -220,6 +220,8 @@
   margin-bottom:4px;display:flex;justify-content:space-between;}
 .pl-trendbar{display:flex;height:14px;border-radius:6px;overflow:hidden;background:var(--surface-2);}
 .pl-trendbar span{height:100%;}
+.pl-onboard-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;}
+.pl-onboard-dot-active{background:var(--exercise);}
 .pl-toast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);
   background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px 18px;
   border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:all .25s ease;z-index:30;
@@ -377,6 +379,14 @@
     <div id="pl-detail-overlay" class="pl-overlay">
       <div class="pl-overlay-close" onclick="plCloseDetail()">&times;</div>
       <div id="pl-detail-content"></div>
+    </div>
+
+    <div id="pl-onboarding-overlay" class="pl-overlay" style="z-index:45;">
+      <div style="margin-top:80px;text-align:center;" id="pl-onboard-content"></div>
+      <div style="margin-top:auto;padding-bottom:10px;">
+        <button type="button" class="pl-cta" id="pl-onboard-next-btn" onclick="plOnboardNext()">다음</button>
+        <button type="button" class="pl-seed-btn" style="width:100%;border:none;background:none;color:var(--text-faint);box-shadow:none;" onclick="plCloseOnboarding()">건너뛰기</button>
+      </div>
     </div>
 
     <div id="pl-settings-overlay" class="pl-overlay">
@@ -554,6 +564,52 @@ async function plLoad(){
   plRenderHistory();
   plRenderStats();
   spinner.classList.add('pl-hide');
+  plMaybeShowOnboarding();
+}
+
+const PL_ONBOARD_SLIDES = [
+  { emoji:'📔', title:'박동일지에 오신 걸 환영해요', body:'심박수 중심으로 운동을 기록하는 나만의 일지예요.' },
+  { emoji:'📊', title:'기록하면 자동으로 쌓여요', body:'시간과 심박수만 입력하면, 목표 진행률과 통계가 자동으로 만들어져요.' },
+  { emoji:'🔥', title:'꾸준함을 함께 만들어요', body:'매일 목표를 채우면 연속 기록(스트릭)이 쌓이고, 월별 성장도 확인할 수 있어요.' }
+];
+let PL_ONBOARD_STEP = 0;
+
+function plRenderOnboardSlide(){
+  const s = PL_ONBOARD_SLIDES[PL_ONBOARD_STEP];
+  const dots = PL_ONBOARD_SLIDES.map(function(_, i){
+    return '<span class="pl-onboard-dot'+(i===PL_ONBOARD_STEP?' pl-onboard-dot-active':'')+'"></span>';
+  }).join(' ');
+  document.getElementById('pl-onboard-content').innerHTML =
+    '<div style="font-size:52px;margin-bottom:14px;">'+s.emoji+'</div>'+
+    '<div class="pl-hero-date" style="font-size:22px;">'+s.title+'</div>'+
+    '<div class="pl-hero-meta" style="margin-top:10px;font-size:14px;line-height:1.7;">'+s.body+'</div>'+
+    '<div style="margin:22px 0;">'+dots+'</div>';
+  document.getElementById('pl-onboard-next-btn').textContent =
+    (PL_ONBOARD_STEP===PL_ONBOARD_SLIDES.length-1) ? '시작하기' : '다음';
+}
+
+function plOnboardNext(){
+  if(PL_ONBOARD_STEP < PL_ONBOARD_SLIDES.length-1){
+    PL_ONBOARD_STEP++;
+    plRenderOnboardSlide();
+  } else {
+    plCloseOnboarding();
+  }
+}
+
+function plCloseOnboarding(){
+  document.getElementById('pl-onboarding-overlay').classList.remove('pl-show');
+  try{ localStorage.setItem('pl-onboarding-seen', '1'); }catch(e){}
+}
+
+function plMaybeShowOnboarding(){
+  let seen = null;
+  try{ seen = localStorage.getItem('pl-onboarding-seen'); }catch(e){}
+  if(!seen){
+    PL_ONBOARD_STEP = 0;
+    plRenderOnboardSlide();
+    document.getElementById('pl-onboarding-overlay').classList.add('pl-show');
+  }
 }
 
 async function plPersist(){
