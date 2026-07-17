@@ -260,6 +260,9 @@
           <input type="text" id="pl-migrate-code" placeholder="예: bakdong7" style="text-transform:lowercase;">
         </div>
         <div id="pl-sync-error" class="pl-error" style="text-align:center;margin-top:14px;"></div>
+        <div style="font-family:var(--f-mono);font-size:11px;color:var(--text-faint);margin-top:20px;">
+          로그인하면 <a href="./privacy.html" target="_blank" style="color:var(--stand);">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
+        </div>
       </div>
     </div>
 
@@ -400,6 +403,8 @@
       <div class="pl-h">계정</div>
       <div id="pl-account-info" class="pl-hero-meta" style="margin-bottom:12px;"></div>
       <button type="button" class="pl-seed-btn" style="width:100%;" onclick="plSignOut()">로그아웃</button>
+      <a href="./privacy.html" target="_blank" style="display:block;text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-faint);margin-top:16px;">개인정보처리방침 보기</a>
+      <div id="pl-delete-account-zone" style="margin-top:14px;"></div>
     </div>
 
     <div class="pl-toast" id="pl-toast"></div>
@@ -516,6 +521,36 @@ async function plSignInGoogle(){
 async function plSignOut(){
   try{ await firebase.auth().signOut(); }catch(e){}
   plCloseSettings();
+}
+
+function plRenderDeleteAccountButton(){
+  const zone = document.getElementById('pl-delete-account-zone');
+  zone.innerHTML = '<button type="button" class="pl-delete-btn" onclick="plConfirmDeleteAccount()">모든 데이터 삭제</button>';
+}
+
+function plConfirmDeleteAccount(){
+  const zone = document.getElementById('pl-delete-account-zone');
+  zone.innerHTML =
+    '<div style="text-align:center;font-size:13px;color:var(--text-dim);margin-bottom:10px;">정말 모든 기록을 삭제할까요? 되돌릴 수 없어요.</div>'+
+    '<div style="display:flex;gap:10px;">'+
+    '<button class="pl-delete-btn" style="flex:1;border-color:var(--border);color:var(--text-dim);" onclick="plRenderDeleteAccountButton()">취소</button>'+
+    '<button class="pl-delete-btn" style="flex:1;background:var(--danger);border-color:var(--danger);color:#fff;" onclick="plDeleteAllData()">삭제</button>'+
+    '</div>';
+}
+
+async function plDeleteAllData(){
+  try{
+    await plDb.collection('logs').doc(PL_SYNC_CODE).delete();
+    PL_WORKOUTS = [];
+    plCloseSettings();
+    plRenderHome();
+    plRenderHistory();
+    plRenderStats();
+    plToast('모든 기록을 삭제했어요');
+  }catch(e){
+    console.error('delete all failed', e);
+    plToast('삭제에 실패했어요. 다시 시도해주세요.');
+  }
 }
 
 async function plMigrateFromCode(code){
@@ -1032,6 +1067,7 @@ function plOpenSettings(){
   document.getElementById('s-monthly-days').value = PL_SETTINGS.monthlyGoalDays;
   document.getElementById('s-weekly-min').value = PL_SETTINGS.weeklyGoalMin;
   document.getElementById('s-monthly-km').value = PL_SETTINGS.monthlyGoalKm;
+  plRenderDeleteAccountButton();
   document.getElementById('pl-settings-overlay').classList.add('pl-show');
 }
 
