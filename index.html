@@ -250,14 +250,13 @@
       <div style="margin-top:60px;text-align:center;">
         <div class="pl-brand" style="justify-content:center;display:flex;font-size:26px;margin-bottom:8px;">박동일지</div>
         <div style="color:var(--text-dim);font-size:13px;margin-bottom:32px;">
-          컴퓨터와 폰에서 같은 기록을 보려면<br>동기화 코드를 하나 정해서 양쪽에 똑같이 입력해주세요.
+          구글 계정으로 로그인하면<br>컴퓨터와 폰에서 같은 기록을 볼 수 있어요.
         </div>
-        <div class="pl-field" style="text-align:left;">
-          <label>동기화 코드</label>
-          <input type="text" id="pl-sync-input" placeholder="예: bakdong7" style="text-transform:lowercase;">
+        <button type="button" class="pl-cta" onclick="plSignInGoogle()">🔵 Google로 로그인</button>
+        <div class="pl-field" style="text-align:left;margin-top:20px;">
+          <label>이전 동기화 코드가 있다면 입력해서 데이터 가져오기 (선택)</label>
+          <input type="text" id="pl-migrate-code" placeholder="예: bakdong7" style="text-transform:lowercase;">
         </div>
-        <button type="button" class="pl-cta" onclick="plStartWithCode()">이 코드로 시작하기</button>
-        <button type="button" class="pl-seed-btn" style="width:100%;margin-top:4px;" onclick="plGenerateCode()">코드 새로 만들기(처음 쓰는 경우)</button>
         <div id="pl-sync-error" class="pl-error" style="text-align:center;margin-top:14px;"></div>
       </div>
     </div>
@@ -388,6 +387,9 @@
       <div class="pl-field"><label>주간 누적 목표 (분)</label><input type="number" id="s-weekly-min" step="10"></div>
       <div class="pl-field"><label>월간 목표 거리 (km)</label><input type="number" id="s-monthly-km" step="5"></div>
       <button type="button" class="pl-cta" onclick="plSaveSettings()">저장</button>
+      <div class="pl-h">계정</div>
+      <div id="pl-account-info" class="pl-hero-meta" style="margin-bottom:12px;"></div>
+      <button type="button" class="pl-seed-btn" style="width:100%;" onclick="plSignOut()">로그아웃</button>
     </div>
 
     <div class="pl-toast" id="pl-toast"></div>
@@ -397,6 +399,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <script>
 const PL_FIREBASE_CONFIG = {
@@ -486,56 +489,67 @@ function plNormalizeCode(raw){
   return (raw||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
 }
 
-function plGenerateCode(){
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-  let code = '';
-  for(let i=0;i<8;i++){ code += chars[Math.floor(Math.random()*chars.length)]; }
-  document.getElementById('pl-sync-input').value = code;
-  document.getElementById('pl-sync-error').classList.remove('pl-show');
-  document.getElementById('pl-sync-error').textContent = '이 코드를 꼭 기억하거나 메모해두세요. 다른 기기에서 같은 코드를 입력하면 기록이 이어집니다.';
-  document.getElementById('pl-sync-error').classList.add('pl-show');
-}
-
-async function plStartWithCode(){
-  const code = plNormalizeCode(document.getElementById('pl-sync-input').value);
+async function plSignInGoogle(){
   const errEl = document.getElementById('pl-sync-error');
-  if(!code || code.length<4){
-    errEl.textContent = '코드는 4자 이상의 영문/숫자로 입력해주세요.';
-    errEl.classList.add('pl-show');
-    return;
-  }
   errEl.classList.remove('pl-show');
-  PL_SYNC_CODE = code;
-  try{ localStorage.setItem('pl-sync-code', code); }catch(e){}
-  document.getElementById('pl-sync-gate').classList.remove('pl-show');
-  await plLoad();
+  try{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await firebase.auth().signInWithPopup(provider);
+    // onAuthStateChanged handles the rest (load + migration)
+  }catch(e){
+    console.error('google sign-in failed', e);
+    errEl.textContent = '로그인에 실패했어요. 다시 시도해주세요.';
+    errEl.classList.add('pl-show');
+  }
 }
 
-async function plCheckStorage(){
-  const banner = document.getElementById('pl-storage-banner');
+async function plSignOut(){
+  try{ await firebase.auth().signOut(); }catch(e){}
+  plCloseSettings();
+}
+
+async function plMigrateFromCode(code){
   try{
-    await plDb.collection('logs').doc('__ping__').set({ t: Date.now() }, { merge: true });
-    PL_STORAGE_OK = true;
+    const oldDoc = await plDb.collection('logs').doc(code).get();
+    if(!oldDoc.exists || !oldDoc.data().workoutsJson) return;
+    const oldWorkouts = JSON.parse(oldDoc.data().workoutsJson);
+    const existingIds = new Set(PL_WORKOUTS.map(function(w){ return w.id; }));
+    const merged = PL_WORKOUTS.concat(oldWorkouts.filter(function(w){ return !existingIds.has(w.id); }));
+    PL_WORKOUTS = merged;
+    await plPersist();
+    plToast('이전 기록을 가져왔어요!');
   }catch(e){
-    PL_STORAGE_OK = false;
+    console.error('migration failed', e);
+    plToast('이전 코드에서 데이터를 가져오지 못했어요.');
   }
-  banner.style.display = PL_STORAGE_OK ? 'none' : 'block';
 }
 
 async function plLoad(){
   const spinner = document.getElementById('pl-loading-spinner');
+  const banner = document.getElementById('pl-storage-banner');
   spinner.classList.remove('pl-hide');
-  await plCheckStorage();
   try{
     const doc = await plDb.collection('logs').doc(PL_SYNC_CODE).get();
     PL_WORKOUTS = (doc.exists && doc.data().workoutsJson) ? JSON.parse(doc.data().workoutsJson) : [];
     if(doc.exists && doc.data().settingsJson){
       try{ PL_SETTINGS = Object.assign({}, PL_SETTINGS, JSON.parse(doc.data().settingsJson)); }catch(e2){}
     }
+    PL_STORAGE_OK = true;
+    banner.style.display = 'none';
   }catch(e){
     console.error('load failed', e);
     PL_WORKOUTS = [];
+    PL_STORAGE_OK = false;
+    banner.style.display = 'block';
   }
+  const migrateCode = plNormalizeCode(document.getElementById('pl-migrate-code').value);
+  if(migrateCode){
+    document.getElementById('pl-migrate-code').value = '';
+    await plMigrateFromCode(migrateCode);
+  }
+  const acctInfo = document.getElementById('pl-account-info');
+  const user = firebase.auth().currentUser;
+  if(acctInfo && user){ acctInfo.textContent = (user.email || '구글 계정') + '으로 로그인됨'; }
   plRenderHome();
   plRenderHistory();
   plRenderStats();
@@ -1356,13 +1370,17 @@ function plRenderTrendRows(){
 function plInit(){
   plBuildTypeChips();
   document.getElementById('f-date').value = plToday();
-  let savedCode = null;
-  try{ savedCode = localStorage.getItem('pl-sync-code'); }catch(e){}
-  if(savedCode){
-    PL_SYNC_CODE = savedCode;
-    document.getElementById('pl-sync-gate').classList.remove('pl-show');
-    plLoad();
-  }
+  firebase.auth().onAuthStateChanged(function(user){
+    if(user){
+      PL_SYNC_CODE = user.uid;
+      document.getElementById('pl-sync-gate').classList.remove('pl-show');
+      plLoad();
+    } else {
+      PL_SYNC_CODE = null;
+      PL_WORKOUTS = [];
+      document.getElementById('pl-sync-gate').classList.add('pl-show');
+    }
+  });
 }
 
 plInit();
