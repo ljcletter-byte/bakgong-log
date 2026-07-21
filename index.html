@@ -1,3 +1,9 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>박동일지 - 심박수로 보는 나의 운동</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#3aa655">
 <style>
@@ -10,7 +16,7 @@
   --border:#d3ecc6;
   --text:#1f3320;
   --text-dim:#5c7a5a;
-  --text-faint:#95b592;
+  --text-faint:#6b8f68;
   --zone1:#2f9bd6;
   --zone2:#1fa6a0;
   --zone3:#4caf50;
@@ -183,7 +189,8 @@
 .pl-overlay.pl-show{display:flex;}
 .pl-overlay-close{align-self:flex-end;background:var(--surface);border:1px solid var(--border);
   color:var(--text);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;cursor:pointer;margin-bottom:6px;font-size:18px;line-height:1;}
+  justify-content:center;cursor:pointer;margin-bottom:6px;font-size:18px;line-height:1;
+  padding:0;font-family:inherit;}
 .pl-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
 .pl-detail-cell{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;}
 .pl-detail-cell .pl-label{font-size:11px;color:var(--text-dim);}
@@ -233,7 +240,14 @@
 .pl-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--border);
   border-top-color:var(--exercise);animation:plSpin .8s linear infinite;}
 @keyframes plSpin{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion: reduce){
+  .pl-screen.pl-active{animation:none;}
+  .pl-hist-item{transition:none;}
+  .pl-spinner{animation-duration:2.2s;}
+}
 </style>
+</head>
+<body>
 
 <div class="pl-app">
   <div class="pl-phone">
@@ -242,7 +256,7 @@
         <div class="pl-brand">박동일지</div>
         <div class="pl-tagline">심박수로 보는 나의 운동</div>
       </div>
-      <button type="button" class="pl-settings-btn" onclick="plOpenSettings()">⚙️</button>
+      <button type="button" class="pl-settings-btn" onclick="plOpenSettings()" aria-label="목표 설정 열기">⚙️</button>
     </div>
     <div id="pl-storage-banner" class="pl-storage-banner" style="display:none;">
       클라우드 저장소에 연결할 수 없어요. 인터넷 연결을 확인해주세요. 기록이 새로고침 후 사라질 수 있어요.
@@ -380,7 +394,7 @@
     </nav>
 
     <div id="pl-detail-overlay" class="pl-overlay">
-      <div class="pl-overlay-close" onclick="plCloseDetail()">&times;</div>
+      <button type="button" class="pl-overlay-close" onclick="plCloseDetail()" aria-label="닫기">&times;</button>
       <div id="pl-detail-content"></div>
     </div>
 
@@ -393,7 +407,7 @@
     </div>
 
     <div id="pl-settings-overlay" class="pl-overlay">
-      <div class="pl-overlay-close" onclick="plCloseSettings()">&times;</div>
+      <button type="button" class="pl-overlay-close" onclick="plCloseSettings()" aria-label="닫기">&times;</button>
       <div class="pl-h" style="margin-top:6px;">목표 설정</div>
       <div class="pl-field"><label>일일 목표 운동시간 (분)</label><input type="number" id="s-daily-min" step="5"></div>
       <div class="pl-field"><label>월간 목표 일수 (일)</label><input type="number" id="s-monthly-days" step="1"></div>
@@ -404,10 +418,18 @@
       <div id="pl-account-info" class="pl-hero-meta" style="margin-bottom:12px;"></div>
       <button type="button" class="pl-seed-btn" style="width:100%;" onclick="plSignOut()">로그아웃</button>
       <a href="./privacy.html" target="_blank" style="display:block;text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-faint);margin-top:16px;">개인정보처리방침 보기</a>
+
+      <div class="pl-h">데이터 백업</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <button type="button" class="pl-seed-btn" style="flex:1;" onclick="plExportJSON()">JSON 내보내기</button>
+        <button type="button" class="pl-seed-btn" style="flex:1;" onclick="plExportCSV()">CSV 내보내기</button>
+      </div>
+      <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-bottom:14px;">삭제하기 전에 미리 백업해두는 걸 추천해요.</div>
+
       <div id="pl-delete-account-zone" style="margin-top:14px;"></div>
     </div>
 
-    <div class="pl-toast" id="pl-toast"></div>
+    <div class="pl-toast" id="pl-toast" role="status" aria-live="polite"></div>
     <div id="pl-loading-spinner" class="pl-loading-spinner pl-hide"><div class="pl-spinner"></div></div>
   </div>
 </div>
@@ -536,6 +558,44 @@ function plConfirmDeleteAccount(){
     '<button class="pl-delete-btn" style="flex:1;border-color:var(--border);color:var(--text-dim);" onclick="plRenderDeleteAccountButton()">취소</button>'+
     '<button class="pl-delete-btn" style="flex:1;background:var(--danger);border-color:var(--danger);color:#fff;" onclick="plDeleteAllData()">삭제</button>'+
     '</div>';
+}
+
+function plDownloadBlob(content, mime, filename){
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function plExportJSON(){
+  if(PL_WORKOUTS.length===0){ plToast('내보낼 기록이 없어요'); return; }
+  const dataStr = JSON.stringify(PL_WORKOUTS, null, 2);
+  plDownloadBlob(dataStr, 'application/json', '박동일지_백업_'+plToday()+'.json');
+  plToast('JSON으로 내보냈어요');
+}
+
+function plCsvEscape(v){
+  if(v==null) v = '';
+  v = String(v);
+  if(v.indexOf(',')>-1 || v.indexOf('"')>-1 || v.indexOf('\n')>-1){
+    v = '"'+v.replace(/"/g,'""')+'"';
+  }
+  return v;
+}
+
+function plExportCSV(){
+  if(PL_WORKOUTS.length===0){ plToast('내보낼 기록이 없어요'); return; }
+  const fields = ['date','type','startTime','endTime','duration','avgHr','maxHr','kcalActive','kcalTotal','avgSpeed','distance','rpe','memo'];
+  const labels = ['날짜','종류','시작시간','종료시간','운동시간(분)','평균심박수','최고심박수','활동칼로리','총칼로리','평균속도','거리','RPE','메모'];
+  const sorted = PL_WORKOUTS.slice().sort(function(a,b){ return a.date.localeCompare(b.date); });
+  const rows = sorted.map(function(w){
+    return fields.map(function(f){ return plCsvEscape(w[f]); }).join(',');
+  });
+  const csv = '\uFEFF'+labels.join(',')+'\n'+rows.join('\n');
+  plDownloadBlob(csv, 'text/csv;charset=utf-8;', '박동일지_백업_'+plToday()+'.csv');
+  plToast('CSV로 내보냈어요');
 }
 
 async function plDeleteAllData(){
@@ -942,6 +1002,14 @@ function plLatestWorkout(){
   return sorted[0];
 }
 
+function plIntensityLabel(w){
+  if(!(w.avgHr && w.maxHr && w.maxHr>0)) return '';
+  const frac = w.avgHr/w.maxHr;
+  if(frac>0.85) return '강도 높음';
+  if(frac>0.6) return '강도 보통';
+  return '강도 낮음';
+}
+
 function plRenderHero(){
   const wrap = document.getElementById('pl-hero-wrap');
   const w = plLatestWorkout();
@@ -954,11 +1022,12 @@ function plRenderHero(){
   const d = plFromISO(w.date);
   const dateStr = (d.getMonth()+1)+'월 '+d.getDate()+'일의 기록';
   const ring = plRingSVG(w, 96);
+  const intensity = plIntensityLabel(w);
   wrap.innerHTML = '<div class="pl-hero-card">'+
     '<div class="pl-hero-text">'+
       '<div class="pl-hero-date">'+dateStr+'</div>'+
       '<div class="pl-hero-tagline">'+w.type+' '+w.duration.toFixed(0)+'분 탔어요</div>'+
-      '<div class="pl-hero-meta">'+(w.avgHr?Math.round(w.avgHr)+' bpm 평균':'심박수 없음')+(w.distance!=null?' · '+w.distance.toFixed(1)+'km':'')+'</div>'+
+      '<div class="pl-hero-meta">'+(w.avgHr?Math.round(w.avgHr)+' bpm 평균':'심박수 없음')+(w.distance!=null?' · '+w.distance.toFixed(1)+'km':'')+(intensity?' · '+intensity:'')+'</div>'+
     '</div>'+
     '<div class="pl-ring-wrap" style="margin:0;">'+ring+
       '<div class="pl-ring-center"><div class="pl-big" style="font-size:15px;">'+(w.avgHr?Math.round(w.avgHr):'--')+'</div></div>'+
@@ -1188,7 +1257,7 @@ function plOpenDetail(id){
     '<div class="pl-ring-wrap">'+ring+
     '<div class="pl-ring-center"><div class="pl-big" style="font-size:26px;">'+(w.avgHr?Math.round(w.avgHr):'--')+
     '<span style="font-size:12px;color:var(--text-dim);"> bpm</span></div><div class="pl-sub">'+w.duration.toFixed(1)+'분</div></div></div>'+
-    '<div style="text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:14px;">'+w.date+' · '+w.type+(w.startTime&&w.endTime?' · '+w.startTime.slice(0,5)+' ~ '+w.endTime.slice(0,5):'')+'</div>'+
+    '<div style="text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:14px;">'+w.date+' · '+w.type+(w.startTime&&w.endTime?' · '+w.startTime.slice(0,5)+' ~ '+w.endTime.slice(0,5):'')+(plIntensityLabel(w)?' · '+plIntensityLabel(w):'')+'</div>'+
     '<div class="pl-detail-grid">'+
     '<div class="pl-detail-cell"><div class="pl-label">최고 심박수</div><div class="pl-value">'+(w.maxHr?Math.round(w.maxHr):'-')+'</div></div>'+
     '<div class="pl-detail-cell"><div class="pl-label">체감 강도</div><div class="pl-value">'+w.rpe+'/10</div></div>'+
@@ -1483,3 +1552,5 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+</body>
+</html>
