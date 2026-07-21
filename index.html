@@ -364,7 +364,9 @@
         </div>
         <div class="pl-summarygrid" id="pl-summary-grid"></div>
         <div id="pl-monthly-challenge"></div>
-        <div class="pl-h" style="margin-top:6px;">이번 달 vs 지난달</div>
+        <div class="pl-h" style="margin-top:6px;">코치의 피드백</div>
+        <div id="pl-coach-feedback"></div>
+        <div class="pl-h">이번 달 vs 지난달</div>
         <div id="pl-month-compare"></div>
         <div class="pl-h">심박수·강도 추이</div>
         <div id="pl-hr-trend-chart"></div>
@@ -1360,6 +1362,7 @@ function plRenderStats(){
 
   const chartArea = document.getElementById('pl-stats-chart-area');
   chartArea.innerHTML = plCurrentPeriod==='week' ? plRenderWeekBarsHTML() : plRenderHeatmapHTML();
+  plRenderCoachFeedback();
   plRenderMonthCompare();
   plRenderHrTrendChart();
   plRenderTrendRows();
@@ -1419,6 +1422,62 @@ function plRenderHeatmapHTML(){
     '<span class="pl-legend-box" style="background:rgba(242,167,27,0.5);margin-left:8px;"></span>보통'+
     '<span class="pl-legend-box" style="background:rgba(242,167,27,1);margin-left:8px;"></span>많이 탐</div>';
 }
+
+function plRenderCoachFeedback(){
+  const wrap = document.getElementById('pl-coach-feedback');
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-13);
+  const recent = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date) >= cutoff; })
+    .sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+  if(recent.length < 3){
+    wrap.innerHTML = '<div class="pl-empty" style="padding:16px 10px;">최근 2주간 기록이 3개 이상 쌓이면 피드백을 드려요.</div>';
+    return;
+  }
+
+  const half = Math.floor(recent.length/2);
+  function effOf(list){
+    const vals = list.filter(function(w){ return w.avgSpeed!=null && w.avgHr; }).map(function(w){ return w.avgSpeed/w.avgHr; });
+    return vals.length ? plAvg(vals) : null;
+  }
+  const effFirst = effOf(recent.slice(0, half));
+  const effSecond = effOf(recent.slice(half));
+
+  const rpeList = recent.map(function(w){ return w.rpe; }).filter(function(v){ return v!=null; });
+  const avgRpe = rpeList.length ? plAvg(rpeList) : null;
+
+  const daysInWindow = 14;
+  const uniqueDays = {};
+  recent.forEach(function(w){ uniqueDays[w.date] = true; });
+  const activeDayRatio = Object.keys(uniqueDays).length / daysInWindow;
+
+  let icon = '💬', msg = '';
+
+  if(avgRpe!=null && avgRpe>=8.3 && recent.length>=4){
+    icon = '😮‍💨';
+    msg = '최근 체감강도가 계속 높게 나오고 있어요. 무리하고 있을 수 있으니, 하루 이틀은 가볍게 쉬거나 강도를 낮춰보는 걸 추천해요.';
+  } else if(effFirst!=null && effSecond!=null && effSecond > effFirst*1.03){
+    icon = '📈';
+    const pct = ((effSecond-effFirst)/effFirst*100).toFixed(0);
+    msg = '같은 심박수 대비 속도가 최근 '+pct+'% 좋아졌어요. 심폐지구력이 늘고 있다는 신호예요. 지금 페이스를 유지해보세요.';
+  } else if(effFirst!=null && effSecond!=null && effSecond < effFirst*0.97){
+    icon = '🔋';
+    msg = '최근 심박 효율이 살짝 떨어졌어요. 컨디션 저하나 피로가 누적됐을 수 있으니, 수면과 휴식을 챙겨보는 게 좋겠어요.';
+  } else if(activeDayRatio < 0.3){
+    icon = '🌱';
+    msg = '최근 2주간 운동 빈도가 낮아졌어요. 부담 없이 짧게라도 다시 리듬을 만들어보는 걸 추천해요.';
+  } else if(activeDayRatio >= 0.3){
+    icon = '💪';
+    msg = '꾸준히 잘 이어가고 있어요. 같은 페이스가 편안하게 느껴진다면, 시간이나 거리를 조금씩 늘려보는 것도 좋겠어요.';
+  } else {
+    msg = '데이터가 더 쌓이면 좀 더 구체적인 피드백을 드릴 수 있어요.';
+  }
+
+  wrap.innerHTML = '<div class="pl-hero-card" style="display:block;">'+
+    '<div class="pl-hero-tagline" style="font-size:17px;">'+icon+' '+msg+'</div>'+
+    '<div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:12px;">이 피드백은 입력하신 기록의 패턴을 기반으로 자동 계산된 것이며, 의료적 진단이나 전문 트레이너의 조언을 대신하지 않아요. 통증이나 건강 이상이 있다면 전문가와 상담하세요.</div>'+
+  '</div>';
+}
+
 
 function plRenderMonthCompare(){
   const wrap = document.getElementById('pl-month-compare');
