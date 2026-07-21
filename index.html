@@ -366,6 +366,8 @@
         <div id="pl-monthly-challenge"></div>
         <div class="pl-h" style="margin-top:6px;">코치의 피드백</div>
         <div id="pl-coach-feedback"></div>
+        <div class="pl-h">AI 코칭 <span style="font-family:var(--f-mono);font-size:11px;color:var(--text-faint);">베타</span></div>
+        <div id="pl-ai-coach"></div>
         <div class="pl-h">이번 달 vs 지난달</div>
         <div id="pl-month-compare"></div>
         <div class="pl-h">심박수·강도 추이</div>
@@ -417,6 +419,15 @@
       <div class="pl-field"><label>주간 누적 목표 (분)</label><input type="number" id="s-weekly-min" step="10"></div>
       <div class="pl-field"><label>월간 목표 거리 (km)</label><input type="number" id="s-monthly-km" step="5"></div>
       <button type="button" class="pl-cta" onclick="plSaveSettings()">저장</button>
+
+      <div class="pl-h">AI 코칭 <span style="font-family:var(--f-mono);font-size:11px;color:var(--text-faint);">선택</span></div>
+      <div class="pl-field"><label>나만의 Claude API 키</label><input type="password" id="s-api-key" placeholder="sk-ant-..."></div>
+      <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-bottom:10px;line-height:1.6;">
+        이 키는 이 브라우저에만 저장되고 서버로 전송되지 않아요. 사용료는 본인 계정으로 청구됩니다.
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--stand);">키 발급받기</a>
+      </div>
+      <button type="button" class="pl-seed-btn" style="width:100%;margin-bottom:16px;" onclick="plSaveApiKey()">키 저장</button>
+
       <div class="pl-h">계정</div>
       <div id="pl-account-info" class="pl-hero-meta" style="margin-bottom:12px;"></div>
       <button type="button" class="pl-seed-btn" style="width:100%;" onclick="plSignOut()">로그아웃</button>
@@ -1143,8 +1154,20 @@ function plOpenSettings(){
   document.getElementById('s-monthly-days').value = PL_SETTINGS.monthlyGoalDays;
   document.getElementById('s-weekly-min').value = PL_SETTINGS.weeklyGoalMin;
   document.getElementById('s-monthly-km').value = PL_SETTINGS.monthlyGoalKm;
+  let savedKey = '';
+  try{ savedKey = localStorage.getItem('pl-api-key') || ''; }catch(e){}
+  document.getElementById('s-api-key').value = savedKey;
   plRenderDeleteAccountButton();
   document.getElementById('pl-settings-overlay').classList.add('pl-show');
+}
+
+function plSaveApiKey(){
+  const key = document.getElementById('s-api-key').value.trim();
+  try{
+    if(key){ localStorage.setItem('pl-api-key', key); plToast('API 키를 저장했어요'); }
+    else { localStorage.removeItem('pl-api-key'); plToast('API 키를 삭제했어요'); }
+  }catch(e){ console.error('api key save failed', e); }
+  plRenderAiCoachSection();
 }
 
 function plCloseSettings(){
@@ -1363,6 +1386,7 @@ function plRenderStats(){
   const chartArea = document.getElementById('pl-stats-chart-area');
   chartArea.innerHTML = plCurrentPeriod==='week' ? plRenderWeekBarsHTML() : plRenderHeatmapHTML();
   plRenderCoachFeedback();
+  plRenderAiCoachSection();
   plRenderMonthCompare();
   plRenderHrTrendChart();
   plRenderTrendRows();
@@ -1421,6 +1445,72 @@ function plRenderHeatmapHTML(){
     '<div class="pl-heat-legend"><span class="pl-legend-box" style="background:var(--surface)"></span>없음'+
     '<span class="pl-legend-box" style="background:rgba(242,167,27,0.5);margin-left:8px;"></span>보통'+
     '<span class="pl-legend-box" style="background:rgba(242,167,27,1);margin-left:8px;"></span>많이 탐</div>';
+}
+
+function plRenderAiCoachSection(){
+  const wrap = document.getElementById('pl-ai-coach');
+  if(!wrap) return;
+  let key = '';
+  try{ key = localStorage.getItem('pl-api-key') || ''; }catch(e){}
+  if(!key){
+    wrap.innerHTML = '<div class="pl-empty" style="padding:16px 10px;">설정에서 나만의 API 키를 등록하면, AI가 직접 코칭 문장을 만들어드려요.'+
+      '<div style="margin-top:10px;"><button type="button" class="pl-seed-btn" onclick="plOpenSettings()">설정 열기</button></div></div>';
+    return;
+  }
+  wrap.innerHTML = '<button type="button" class="pl-cta" style="margin-bottom:8px;" onclick="plGenerateAiCoaching()">✨ AI 코칭 받기</button><div id="pl-ai-coach-result"></div>';
+}
+
+async function plGenerateAiCoaching(){
+  let key = '';
+  try{ key = localStorage.getItem('pl-api-key') || ''; }catch(e){}
+  if(!key){ plToast('API 키를 먼저 등록해주세요'); return; }
+  const resultEl = document.getElementById('pl-ai-coach-result');
+  if(PL_WORKOUTS.length===0){
+    resultEl.innerHTML = '<div class="pl-empty" style="padding:12px 4px;">기록이 더 쌓이면 코칭을 받을 수 있어요.</div>';
+    return;
+  }
+  resultEl.innerHTML = '<div class="pl-empty" style="padding:12px 4px;">AI가 코칭 문장을 만들고 있어요…</div>';
+
+  const recent = PL_WORKOUTS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).slice(0,10);
+  const summary = recent.map(function(w){
+    return w.date+' '+w.type+' '+w.duration.toFixed(0)+'분'+
+      (w.avgHr?' 평균심박수'+Math.round(w.avgHr)+'bpm':'')+
+      (w.distance!=null?' 거리'+w.distance.toFixed(1)+'km':'')+
+      (w.rpe!=null?' 체감강도'+w.rpe+'/10':'');
+  }).join('\n');
+
+  const prompt = '너는 따뜻하고 격려하는 운동 코치야. 아래는 사용자의 최근 운동 기록이야. 이 데이터를 보고 2~3문장으로 짧고 구체적인 코칭 피드백을 한국어로 작성해줘. 의학적 진단이나 처방은 하지 말고, 통증이나 건강 이상이 의심되면 전문가와 상담하라고 안내해줘. 다른 설명 없이 코칭 문장만 출력해줘.\n\n최근 운동 기록:\n'+summary;
+
+  try{
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-5',
+        max_tokens: 250,
+        messages: [{ role:'user', content: prompt }]
+      })
+    });
+    if(!response.ok){
+      console.error('AI coaching request failed', response.status, await response.text());
+      resultEl.innerHTML = '<div class="pl-empty" style="padding:12px 4px;">요청에 실패했어요. API 키가 올바른지 확인해주세요.</div>';
+      return;
+    }
+    const data = await response.json();
+    const text = (data.content||[]).map(function(c){ return c.text||''; }).join('').trim();
+    resultEl.innerHTML = '<div class="pl-hero-card" style="display:block;">'+
+      '<div class="pl-hero-tagline" style="font-size:17px;">✨ '+text+'</div>'+
+      '<div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:12px;">AI가 생성한 문장이며, 의료적 진단이나 전문가 상담을 대신하지 않아요.</div>'+
+    '</div>';
+  }catch(e){
+    console.error('AI coaching failed', e);
+    resultEl.innerHTML = '<div class="pl-empty" style="padding:12px 4px;">네트워크 오류로 코칭을 받지 못했어요.</div>';
+  }
 }
 
 function plRenderCoachFeedback(){
