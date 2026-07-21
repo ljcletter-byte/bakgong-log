@@ -76,36 +76,7 @@
 .pl-tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;}
 .pl-tab.pl-tab-active{color:var(--exercise);}
 
-@media (min-width: 860px){
-  .pl-app{align-items:center;padding:40px 24px;}
-  .pl-phone{
-    max-width:1080px;min-height:auto;height:calc(100vh - 80px);
-    display:grid;grid-template-columns:220px 1fr;grid-template-rows:auto auto 1fr;
-    grid-template-areas:"topbar topbar" "banner banner" "nav content";
-    border-radius:24px;box-shadow:0 30px 70px rgba(66,50,26,0.22);
-  }
-  .pl-topbar{grid-area:topbar;padding:26px 32px 14px;border-bottom:1px solid var(--border);}
-  #pl-storage-banner{grid-area:banner;margin:14px 32px 0;}
-  .pl-tabbar{
-    grid-area:nav;position:static;flex-direction:column;background:var(--surface);
-    border-top:none;border-right:1px dashed var(--border);padding:24px 14px;gap:6px;
-    backdrop-filter:none;height:100%;
-  }
-  .pl-tab{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;
-    padding:12px 14px;border-radius:12px;font-size:13px;}
-  .pl-tab.pl-tab-active{background:var(--surface-2);}
-  .pl-tab svg{width:20px;height:20px;}
-  .pl-screens{grid-area:content;padding:28px 40px 40px;max-width:920px;}
-  .pl-cardrow{overflow-x:visible;flex-wrap:wrap;}
-  .pl-statcard{flex:1 1 200px;box-shadow:0 6px 18px rgba(66,50,26,0.1);
-    border-left:3px solid var(--exercise);}
-  .pl-summarygrid{grid-template-columns:repeat(5,1fr);}
-  .pl-sumcell{box-shadow:0 6px 18px rgba(66,50,26,0.1);border-left:3px solid var(--stand);}
-  .pl-detail-grid{grid-template-columns:repeat(4,1fr);}
-  .pl-detail-cell{box-shadow:0 4px 14px rgba(66,50,26,0.08);}
-  .pl-hist-item, .pl-heat-cell{transition:transform .12s ease;}
-  .pl-hist-item:hover{transform:translateX(2px);}
-}
+
 .pl-h{font-family:var(--f-serif);font-style:italic;font-weight:600;font-size:15px;margin:22px 0 12px;
   color:var(--text-dim);letter-spacing:0.01em;padding-bottom:6px;border-bottom:1px dashed var(--border);}
 .pl-weekstrip{display:flex;justify-content:space-between;margin:18px 0 22px;}
@@ -245,6 +216,36 @@
   .pl-hist-item{transition:none;}
   .pl-spinner{animation-duration:2.2s;}
 }
+@media (min-width: 860px){
+  .pl-app{align-items:center;padding:40px 24px;}
+  .pl-phone{
+    max-width:1080px;min-height:auto;height:calc(100vh - 80px);
+    display:grid;grid-template-columns:220px 1fr;grid-template-rows:auto auto 1fr;
+    grid-template-areas:"topbar topbar" "banner banner" "nav content";
+    border-radius:24px;box-shadow:0 30px 70px rgba(66,50,26,0.22);
+  }
+  .pl-topbar{grid-area:topbar;padding:26px 32px 14px;border-bottom:1px solid var(--border);}
+  #pl-storage-banner{grid-area:banner;margin:14px 32px 0;}
+  .pl-tabbar{
+    grid-area:nav;position:static;flex-direction:column;background:var(--surface);
+    border-top:none;border-right:1px dashed var(--border);padding:24px 14px;gap:6px;
+    backdrop-filter:none;height:100%;
+  }
+  .pl-tab{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;
+    padding:12px 14px;border-radius:12px;font-size:13px;}
+  .pl-tab.pl-tab-active{background:var(--surface-2);}
+  .pl-tab svg{width:20px;height:20px;}
+  .pl-screens{grid-area:content;padding:28px 40px 40px;max-width:920px;}
+  .pl-cardrow{overflow-x:visible;flex-wrap:wrap;}
+  .pl-statcard{flex:1 1 200px;box-shadow:0 6px 18px rgba(66,50,26,0.1);
+    border-left:3px solid var(--exercise);}
+  .pl-summarygrid{grid-template-columns:repeat(5,1fr);}
+  .pl-sumcell{box-shadow:0 6px 18px rgba(66,50,26,0.1);border-left:3px solid var(--stand);}
+  .pl-detail-grid{grid-template-columns:repeat(4,1fr);}
+  .pl-detail-cell{box-shadow:0 4px 14px rgba(66,50,26,0.08);}
+  .pl-hist-item, .pl-heat-cell{transition:transform .12s ease;}
+  .pl-hist-item:hover{transform:translateX(2px);}
+}
 </style>
 </head>
 <body>
@@ -337,10 +338,10 @@
           <div class="pl-duration-display" id="pl-speed-display" style="margin-top:8px;margin-bottom:0;">거리를 입력하면 평균 속도가 자동 계산돼요.</div>
         </div>
 
-        <div class="pl-h">체감 강도 (RPE)</div>
+        <div class="pl-h">체감 강도 (RPE) <span style="font-family:var(--f-mono);font-size:11px;color:var(--text-faint);">선택사항</span></div>
         <div class="pl-range-row">
           <input type="range" min="1" max="10" value="5" id="f-rpe" oninput="plUpdateRpe()">
-          <span class="pl-range-val" id="pl-rpe-val">5</span>
+          <span class="pl-range-val" id="pl-rpe-val">미입력</span>
         </div>
 
         <div class="pl-h">메모</div>
@@ -790,7 +791,9 @@ function plUpdateSpeedDisplay(){
   disp.textContent = '평균 속도: '+speed.toFixed(1)+'km/h';
 }
 
+let PL_RPE_TOUCHED = false;
 function plUpdateRpe(){
+  PL_RPE_TOUCHED = true;
   document.getElementById('pl-rpe-val').textContent = document.getElementById('f-rpe').value;
 }
 
@@ -813,7 +816,8 @@ function plResetForm(){
   document.getElementById('f-distance').value = '';
   document.getElementById('pl-speed-display').textContent = '거리를 입력하면 평균 속도가 자동 계산돼요.';
   document.getElementById('f-rpe').value = 5;
-  plUpdateRpe();
+  PL_RPE_TOUCHED = false;
+  document.getElementById('pl-rpe-val').textContent = '미입력';
   document.getElementById('f-memo').value = '';
   document.getElementById('pl-form-error').classList.remove('pl-show');
 }
@@ -846,8 +850,9 @@ function plStartEdit(id){
   document.getElementById('f-kcaltotal').value = w.kcalTotal!=null ? w.kcalTotal : '';
   document.getElementById('f-distance').value = w.distance!=null ? w.distance : '';
   plUpdateSpeedDisplay();
-  document.getElementById('f-rpe').value = w.rpe || 5;
-  plUpdateRpe();
+  document.getElementById('f-rpe').value = w.rpe != null ? w.rpe : 5;
+  if(w.rpe != null){ PL_RPE_TOUCHED = true; plUpdateRpe(); }
+  else { PL_RPE_TOUCHED = false; document.getElementById('pl-rpe-val').textContent = '미입력'; }
   document.getElementById('f-memo').value = w.memo || '';
   document.querySelectorAll('.pl-screen').forEach(function(s){ s.classList.remove('pl-active'); });
   document.getElementById('scr-add').classList.add('pl-active');
@@ -897,7 +902,7 @@ async function plSaveWorkout(){
     avgSpeed: isNaN(speed) ? null : +speed.toFixed(1),
     distance: isNaN(distance) ? null : distance,
     zones: existingZones,
-    rpe: parseInt(document.getElementById('f-rpe').value, 10),
+    rpe: PL_RPE_TOUCHED ? parseInt(document.getElementById('f-rpe').value, 10) : null,
     memo: document.getElementById('f-memo').value.trim()
   };
 
@@ -1118,7 +1123,7 @@ function plRenderCards(){
   }
 
   wrap.innerHTML =
-    '<div class="pl-statcard"><div class="pl-label">❤️ 최근 평균 심박수</div>'+
+    '<div class="pl-statcard"><div class="pl-label">❤️ 최근 3회 평균 심박수</div>'+
     '<div class="pl-value">'+(avgLast?Math.round(avgLast):'--')+'<span style="font-size:12px;"> bpm</span></div>'+
     deltaHtml+'</div>'+
     '<div class="pl-statcard"><div class="pl-label">⏱ 이번 주 총 시간</div>'+
@@ -1260,7 +1265,7 @@ function plOpenDetail(id){
     '<div style="text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:14px;">'+w.date+' · '+w.type+(w.startTime&&w.endTime?' · '+w.startTime.slice(0,5)+' ~ '+w.endTime.slice(0,5):'')+(plIntensityLabel(w)?' · '+plIntensityLabel(w):'')+'</div>'+
     '<div class="pl-detail-grid">'+
     '<div class="pl-detail-cell"><div class="pl-label">최고 심박수</div><div class="pl-value">'+(w.maxHr?Math.round(w.maxHr):'-')+'</div></div>'+
-    '<div class="pl-detail-cell"><div class="pl-label">체감 강도</div><div class="pl-value">'+w.rpe+'/10</div></div>'+
+    '<div class="pl-detail-cell"><div class="pl-label">체감 강도</div><div class="pl-value">'+(w.rpe!=null?w.rpe+'/10':'-')+'</div></div>'+
     '<div class="pl-detail-cell"><div class="pl-label">활동 칼로리</div><div class="pl-value">'+(w.kcalActive?Math.round(w.kcalActive):'-')+'</div></div>'+
     '<div class="pl-detail-cell"><div class="pl-label">총 칼로리</div><div class="pl-value">'+(w.kcalTotal?Math.round(w.kcalTotal):'-')+'</div></div>'+
     (w.distance!=null ? '<div class="pl-detail-cell"><div class="pl-label">거리</div><div class="pl-value">'+w.distance.toFixed(1)+'km</div></div>' : '')+
@@ -1367,7 +1372,7 @@ function plRenderWeekBarsHTML(){
     const d = new Date(today); d.setDate(today.getDate()-i);
     days.push(d);
   }
-  const labels = ['일','월','화','수','목','금','토'];
+  const wdLabels = ['일','월','화','수','목','금','토'];
   const dayDurs = days.map(function(d){
     const iso = plToISO(d);
     return PL_WORKOUTS.filter(function(w){ return w.date===iso; })
@@ -1379,7 +1384,7 @@ function plRenderWeekBarsHTML(){
     const seg = dur>0 ? '<span style="height:100%;background:var(--exercise)"></span>' : '';
     return '<div class="pl-weekbar-col" style="height:'+heightPct+'%;">'+seg+'</div>';
   }).join('');
-  const lbls = labels.map(function(l){ return '<span>'+l+'</span>'; }).join('');
+  const lbls = days.map(function(d){ return '<span>'+wdLabels[d.getDay()]+'</span>'; }).join('');
   return '<div class="pl-weekbars">'+bars+'</div><div class="pl-weekbars-labels">'+lbls+'</div>';
 }
 
