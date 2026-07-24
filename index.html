@@ -293,6 +293,9 @@
         <button class="pl-cta" onclick="plGoTab('add')">+ 기록 추가</button>
         <button type="button" class="pl-seed-btn" style="width:100%;margin-bottom:20px;" onclick="plShareWeekImage()">이번 주 요약 이미지로 저장</button>
 
+        <div class="pl-h">몸무게</div>
+        <div id="pl-body-wrap"></div>
+
         <div class="pl-h">쿨다운·보완 운동 추천</div>
         <div class="pl-hero-card" style="display:block;margin-bottom:20px;">
           <div class="pl-hero-tagline" style="font-size:17px;">🧘 라이딩 후 스트레칭</div>
@@ -372,6 +375,8 @@
         <div id="pl-month-compare"></div>
         <div class="pl-h">심박수·강도 추이</div>
         <div id="pl-hr-trend-chart"></div>
+        <div class="pl-h">체중 추이</div>
+        <div id="pl-weight-trend-chart"></div>
         <div id="pl-stats-chart-area"></div>
         <div class="pl-h">최근 운동 평균 심박수 비교</div>
         <div id="pl-trend-rows"></div>
@@ -411,9 +416,21 @@
       </div>
     </div>
 
+    <div id="pl-body-overlay" class="pl-overlay">
+      <button type="button" class="pl-overlay-close" onclick="plCloseBodyLog()" aria-label="닫기">&times;</button>
+      <div class="pl-h" style="margin-top:6px;">몸무게 기록</div>
+      <div class="pl-field"><label>날짜</label><input type="date" id="b-date"></div>
+      <div class="pl-field"><label>몸무게 (kg)</label><input type="number" step="0.1" id="b-weight" placeholder="예: 68.5" oninput="plUpdateBmiPreview()"></div>
+      <div id="b-bmi-display" class="pl-duration-display">키를 설정에 입력하면 BMI가 자동 계산돼요.</div>
+      <button type="button" class="pl-cta" onclick="plSaveBodyLog()">저장</button>
+    </div>
+
     <div id="pl-settings-overlay" class="pl-overlay">
       <button type="button" class="pl-overlay-close" onclick="plCloseSettings()" aria-label="닫기">&times;</button>
-      <div class="pl-h" style="margin-top:6px;">목표 설정</div>
+      <div class="pl-h" style="margin-top:6px;">프로필</div>
+      <div class="pl-field"><label>키 (cm)</label><input type="number" id="s-height" step="0.1" placeholder="예: 170"></div>
+
+      <div class="pl-h">목표 설정</div>
       <div class="pl-field"><label>일일 목표 운동시간 (분)</label><input type="number" id="s-daily-min" step="5"></div>
       <div class="pl-field"><label>월간 목표 일수 (일)</label><input type="number" id="s-monthly-days" step="1"></div>
       <div class="pl-field"><label>주간 누적 목표 (분)</label><input type="number" id="s-weekly-min" step="10"></div>
@@ -466,6 +483,7 @@ const plDb = firebase.firestore();
 const PL_ZONE_HEX = ['#2f9bd6','#1fa6a0','#4caf50','#f2a71b','#ef5b52'];
 const PL_TYPES = ['실내자전거','러닝','걷기','기타'];
 let PL_WORKOUTS = [];
+let PL_BODYLOGS = [];
 let plSelectedType = null;
 let plCurrentPeriod = 'week';
 
@@ -650,6 +668,7 @@ async function plLoad(){
   try{
     const doc = await plDb.collection('logs').doc(PL_SYNC_CODE).get();
     PL_WORKOUTS = (doc.exists && doc.data().workoutsJson) ? JSON.parse(doc.data().workoutsJson) : [];
+    PL_BODYLOGS = (doc.exists && doc.data().bodyLogsJson) ? JSON.parse(doc.data().bodyLogsJson) : [];
     if(doc.exists && doc.data().settingsJson){
       try{ PL_SETTINGS = Object.assign({}, PL_SETTINGS, JSON.parse(doc.data().settingsJson)); }catch(e2){}
     }
@@ -1147,9 +1166,10 @@ function plRenderCards(){
     '<div class="pl-delta">꾸준함이 핵심이에요</div></div>';
 }
 
-let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50 };
+let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50, heightCm:null };
 
 function plOpenSettings(){
+  document.getElementById('s-height').value = PL_SETTINGS.heightCm || '';
   document.getElementById('s-daily-min').value = PL_SETTINGS.dailyGoal;
   document.getElementById('s-monthly-days').value = PL_SETTINGS.monthlyGoalDays;
   document.getElementById('s-weekly-min').value = PL_SETTINGS.weeklyGoalMin;
@@ -1175,6 +1195,7 @@ function plCloseSettings(){
 }
 
 async function plSaveSettings(){
+  const height = parseFloat(document.getElementById('s-height').value);
   const daily = parseFloat(document.getElementById('s-daily-min').value);
   const monthDays = parseFloat(document.getElementById('s-monthly-days').value);
   const weekly = parseFloat(document.getElementById('s-weekly-min').value);
@@ -1183,7 +1204,8 @@ async function plSaveSettings(){
     dailyGoal: (!isNaN(daily) && daily>0) ? daily : PL_SETTINGS.dailyGoal,
     monthlyGoalDays: (!isNaN(monthDays) && monthDays>0) ? monthDays : PL_SETTINGS.monthlyGoalDays,
     weeklyGoalMin: (!isNaN(weekly) && weekly>0) ? weekly : PL_SETTINGS.weeklyGoalMin,
-    monthlyGoalKm: (!isNaN(monthKm) && monthKm>0) ? monthKm : PL_SETTINGS.monthlyGoalKm
+    monthlyGoalKm: (!isNaN(monthKm) && monthKm>0) ? monthKm : PL_SETTINGS.monthlyGoalKm,
+    heightCm: (!isNaN(height) && height>0) ? height : null
   };
   try{
     await plDb.collection('logs').doc(PL_SYNC_CODE).set({
@@ -1248,6 +1270,79 @@ function plRenderHome(){
   plRenderGoal();
   plRenderHero();
   plRenderCards();
+  plRenderBodyCard();
+}
+
+function plCalcBmi(weightKg){
+  if(!PL_SETTINGS.heightCm || !weightKg) return null;
+  const hM = PL_SETTINGS.heightCm / 100;
+  return weightKg / (hM*hM);
+}
+
+function plRenderBodyCard(){
+  const wrap = document.getElementById('pl-body-wrap');
+  if(!wrap) return;
+  const sorted = PL_BODYLOGS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+  const latest = sorted[0];
+  if(!latest){
+    wrap.innerHTML = '<div class="pl-hero-card" style="display:block;">'+
+      '<div class="pl-hero-meta" style="margin-bottom:12px;">아직 기록이 없어요.</div>'+
+      '<button type="button" class="pl-seed-btn" style="width:100%;" onclick="plOpenBodyLog()">+ 몸무게 기록</button>'+
+    '</div>';
+    return;
+  }
+  const bmi = plCalcBmi(latest.weight);
+  wrap.innerHTML = '<div class="pl-hero-card">'+
+    '<div class="pl-hero-text">'+
+      '<div class="pl-hero-date">'+latest.date+'</div>'+
+      '<div class="pl-hero-tagline">'+latest.weight.toFixed(1)+' kg</div>'+
+      '<div class="pl-hero-meta">'+(bmi?'BMI '+bmi.toFixed(1):'키를 입력하면 BMI가 계산돼요')+'</div>'+
+    '</div>'+
+    '<button type="button" class="pl-seed-btn" onclick="plOpenBodyLog()">+ 기록</button>'+
+  '</div>';
+}
+
+function plOpenBodyLog(){
+  document.getElementById('b-date').value = plToday();
+  document.getElementById('b-weight').value = '';
+  plUpdateBmiPreview();
+  document.getElementById('pl-body-overlay').classList.add('pl-show');
+}
+
+function plCloseBodyLog(){
+  document.getElementById('pl-body-overlay').classList.remove('pl-show');
+}
+
+function plUpdateBmiPreview(){
+  const disp = document.getElementById('b-bmi-display');
+  const w = parseFloat(document.getElementById('b-weight').value);
+  const bmi = plCalcBmi(w);
+  disp.textContent = bmi ? 'BMI ' + bmi.toFixed(1) : '키를 설정에 입력하면 BMI가 자동 계산돼요.';
+}
+
+async function plSaveBodyLog(){
+  const date = document.getElementById('b-date').value;
+  const weight = parseFloat(document.getElementById('b-weight').value);
+  if(!date || isNaN(weight) || weight<=0){
+    plToast('날짜와 몸무게를 입력해주세요');
+    return;
+  }
+  const existingIndex = PL_BODYLOGS.findIndex(function(b){ return b.date===date; });
+  const entry = { id: existingIndex>-1 ? PL_BODYLOGS[existingIndex].id : plUid(), date: date, weight: weight };
+  if(existingIndex>-1){ PL_BODYLOGS[existingIndex] = entry; } else { PL_BODYLOGS.push(entry); }
+  try{
+    await plDb.collection('logs').doc(PL_SYNC_CODE).set({
+      bodyLogsJson: JSON.stringify(PL_BODYLOGS),
+      workoutsJson: JSON.stringify(PL_WORKOUTS)
+    }, { merge:true });
+    plToast('몸무게를 기록했어요');
+  }catch(e){
+    console.error('body log save failed', e);
+    plToast('저장에 실패했어요');
+  }
+  plCloseBodyLog();
+  plRenderHome();
+  plRenderStats();
 }
 
 function plRenderHistory(){
@@ -1389,6 +1484,7 @@ function plRenderStats(){
   plRenderAiCoachSection();
   plRenderMonthCompare();
   plRenderHrTrendChart();
+  plRenderWeightTrendChart();
   plRenderTrendRows();
 }
 
@@ -1617,6 +1713,40 @@ function plRenderMonthCompare(){
   wrap.innerHTML = '<div class="pl-hero-card" style="display:block;">'+
     lines.map(function(l){ return '<div class="pl-hero-tagline" style="font-size:17px;margin-top:2px;">'+l+'</div>'; }).join('')+
   '</div>';
+}
+
+function plRenderWeightTrendChart(){
+  const wrap = document.getElementById('pl-weight-trend-chart');
+  const sorted = PL_BODYLOGS.slice().sort(function(a,b){ return a.date.localeCompare(b.date); }).slice(-10);
+  if(sorted.length<2){
+    wrap.innerHTML = '<div class="pl-empty" style="padding:20px 10px;">몸무게 기록이 2개 이상 쌓이면 추이가 보여요.</div>';
+    return;
+  }
+  const W=320,H=140,padL=8,padR=8,padT=14,padB=14;
+  const weights = sorted.map(function(b){ return b.weight; });
+  const minW = Math.min.apply(null, weights)-1, maxW = Math.max.apply(null, weights)+1;
+  const stepX = (W-padL-padR)/(sorted.length-1);
+  function xAt(i){ return padL+i*stepX; }
+  function yAt(v){ return H-padB-((v-minW)/(maxW-minW))*(H-padT-padB); }
+  const points = sorted.map(function(b,i){ return xAt(i)+','+yAt(b.weight); }).join(' ');
+  const areaPath = 'M'+xAt(0)+','+(H-padB)+' L'+points.split(' ').join(' L')+' L'+xAt(sorted.length-1)+','+(H-padB)+' Z';
+  const dots = sorted.map(function(b,i){
+    return '<circle cx="'+xAt(i)+'" cy="'+yAt(b.weight)+'" r="4" fill="var(--stand)" stroke="var(--surface)" stroke-width="1.5"/>';
+  }).join('');
+  const svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:150px;">'+
+    '<defs><linearGradient id="plWtGrad" x1="0" y1="0" x2="0" y2="1">'+
+    '<stop offset="0%" stop-color="var(--stand)" stop-opacity="0.28"/>'+
+    '<stop offset="100%" stop-color="var(--stand)" stop-opacity="0"/>'+
+    '</linearGradient></defs>'+
+    '<path d="'+areaPath+'" fill="url(#plWtGrad)"/>'+
+    '<polyline points="'+points+'" fill="none" stroke="var(--stand)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'+
+    dots+
+    '<text x="'+xAt(0)+'" y="'+(yAt(sorted[0].weight)-10)+'" font-size="11" fill="var(--text-dim)" font-family="JetBrains Mono, monospace">'+sorted[0].weight.toFixed(1)+'</text>'+
+    '<text x="'+xAt(sorted.length-1)+'" y="'+(yAt(sorted[sorted.length-1].weight)-10)+'" font-size="11" fill="var(--text-dim)" font-family="JetBrains Mono, monospace" text-anchor="end">'+sorted[sorted.length-1].weight.toFixed(1)+'</text>'+
+    '</svg>';
+  wrap.innerHTML = '<div class="pl-hero-card" style="display:block;">'+svg+
+    '<div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:2px;">'+
+    '<span>'+sorted[0].date+'</span><span>단위: kg</span><span>'+sorted[sorted.length-1].date+'</span></div></div>';
 }
 
 function plRenderHrTrendChart(){
