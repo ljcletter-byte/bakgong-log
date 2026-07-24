@@ -659,15 +659,15 @@ function plNormalizeCode(raw){
 
 async function plSignInGoogle(){
   const errEl = document.getElementById('pl-sync-error');
-  errEl.classList.remove('open');
+  errEl.classList.remove('show');
   try{
     const provider = new firebase.auth.GoogleAuthProvider();
-    await firebase.auth().signInWithPopup(provider);
-    // onAuthStateChanged handles the rest (load + migration)
+    provider.setCustomParameters({ prompt: 'select_account' });
+    await firebase.auth().signInWithRedirect(provider);
   }catch(e){
     console.error('google sign-in failed', e);
     errEl.textContent = '로그인에 실패했어요. 다시 시도해주세요.';
-    errEl.classList.add('open');
+    errEl.classList.add('show');
   }
 }
 
@@ -1936,15 +1936,28 @@ function plToggleOptional(){
 function plInit(){
   plBuildTypeChips();
   document.getElementById('f-date').value = plToday();
+
+  firebase.auth().getRedirectResult().then(function(result){
+    if(result && result.user){
+      console.log('redirect login success:', result.user.email);
+    }
+  }).catch(function(e){
+    if(e && e.code !== 'auth/no-current-user'){
+      console.error('redirect result error', e);
+      const errEl = document.getElementById('pl-sync-error');
+      if(errEl){ errEl.textContent = '로그인에 실패했어요 ('+e.code+'). 다시 시도해주세요.'; errEl.classList.add('show'); }
+    }
+  });
+
   firebase.auth().onAuthStateChanged(function(user){
     if(user){
       PL_SYNC_CODE = user.uid;
-      document.getElementById('login-screen').classList.remove('open');
+      document.getElementById('login-screen').classList.add('hide');
       plLoad();
     } else {
       PL_SYNC_CODE = null;
       PL_WORKOUTS = [];
-      document.getElementById('login-screen').classList.add('open');
+      document.getElementById('login-screen').classList.remove('hide');
     }
   });
 }
