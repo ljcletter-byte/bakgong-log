@@ -192,23 +192,41 @@ input,button,textarea,select{font-family:inherit;}
 /* ══════════════════════════
    기록장 탭
 ══════════════════════════ */
-.month-header{font-size:13px;font-weight:700;color:var(--text-dim);
-  padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:4px;}
-.hist-item{display:flex;align-items:center;gap:12px;padding:12px 0;
-  border-bottom:1px dashed var(--border);cursor:pointer;}
-.hist-item:last-child{border-bottom:none;}
-.hist-icon{width:40px;height:40px;border-radius:var(--r-md);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:18px;}
-.hist-date-col{flex-shrink:0;text-align:center;width:36px;}
-.hist-date-md{font-size:14px;font-weight:700;color:var(--green);}
-.hist-date-wd{font-size:10px;color:var(--text-faint);}
-.hist-main{flex:1;min-width:0;}
-.hist-type{font-size:14px;font-weight:600;}
-.hist-meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
-.hist-right{text-align:right;flex-shrink:0;}
-.hist-dur{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;}
-.hist-hr-pill{font-size:11px;margin-top:2px;display:flex;align-items:center;gap:3px;justify-content:flex-end;}
-.hr-dot{width:7px;height:7px;border-radius:50%;}
+/* 월 요약 헤더 */
+.mon-sum{background:var(--surface-2);border-radius:var(--r-lg);padding:13px 15px;
+  margin:22px 0 10px;border:1px solid var(--border);}
+.mon-sum:first-child{margin-top:0;}
+.mon-sum-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px;}
+.mon-sum-ttl{font-size:15px;font-weight:800;letter-spacing:-0.02em;}
+.mon-sum-hr{font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:700;}
+.mon-sum-stats{font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;}
+/* 주 구분 */
+.wk-sum{display:flex;align-items:center;gap:8px;margin:16px 0 6px;}
+.wk-sum-lbl{font-size:11px;font-weight:700;color:var(--text-faint);white-space:nowrap;}
+.wk-sum-line{flex:1;height:1px;background:var(--border);}
+.wk-sum-val{font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+/* 기록 행 */
+.h-row{display:block;padding:11px 2px 9px;border-bottom:1px solid var(--border);cursor:pointer;
+  transition:background .12s;}
+.h-row:last-child{border-bottom:none;}
+.h-row:hover{background:var(--surface-2);}
+.h-row-top{display:flex;align-items:center;gap:12px;margin-bottom:7px;}
+.h-row-date{flex-shrink:0;width:34px;text-align:center;}
+.h-row-day{font-size:16px;font-weight:800;line-height:1.1;font-family:'JetBrains Mono',monospace;}
+.h-row-wd{font-size:10px;color:var(--text-faint);}
+.h-row-hero{flex:1;display:flex;align-items:baseline;gap:6px;min-width:0;}
+.h-row-hr{font-size:19px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1;}
+.h-row-hrunit{font-size:11px;color:var(--text-dim);font-weight:600;}
+.h-row-delta{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.h-row-delta.down{color:var(--green);}
+.h-row-delta.up{color:var(--red);}
+.h-row-delta.same{color:var(--text-faint);}
+.h-row-side{flex-shrink:0;text-align:right;font-size:12px;color:var(--text-dim);
+  font-family:'JetBrains Mono',monospace;line-height:1.4;}
+.h-row-tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;
+  border-radius:8px;background:var(--purple-l);color:#6d28d9;margin-left:4px;}
+.h-row-bar{height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-left:46px;}
+.h-row-bar span{display:block;height:100%;border-radius:3px;}
 
 /* ══════════════════════════
    분석 탭
@@ -1456,28 +1474,148 @@ async function plSaveBodyLog(){
 function plRenderHistory(){
   const wrap = document.getElementById('pl-history-list');
   if(PL_WORKOUTS.length===0){
-    wrap.innerHTML = '<div class="empty"><div class="empty-ttl">기록이 없어요</div>운동을 마치면 바로 기록해보세요.</div>';
+    wrap.innerHTML = '<div class="empty"><div class="empty-emoji">\uD83D\uDCD3</div>'+
+      '<div class="empty-ttl">기록이 없어요</div>'+
+      '<div class="empty-desc">운동을 마치면 바로 기록해보세요.</div></div>';
     return;
   }
   const wdLabels = ['일','월','화','수','목','금','토'];
-  const sorted = PL_WORKOUTS.slice().sort(function(a,b){
-    return (b.date.localeCompare(a.date)) || (b.id.localeCompare(a.id));
+
+  // 대표 운동종류 파악 (반복 노이즈 제거용)
+  const typeCount = {};
+  PL_WORKOUTS.forEach(function(w){ typeCount[w.type] = (typeCount[w.type]||0)+1; });
+  let mainType = null, maxCnt = 0;
+  Object.keys(typeCount).forEach(function(t){
+    if(typeCount[t] > maxCnt){ maxCnt = typeCount[t]; mainType = t; }
   });
-  let html = '';
-  let lastMonthKey = null;
-  sorted.forEach(function(w){
+
+  // 본인 심박수 범위 (강도 상대평가용)
+  const allHr = PL_WORKOUTS.map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
+  const hrMin = allHr.length ? Math.min.apply(null, allHr) : 0;
+  const hrMax = allHr.length ? Math.max.apply(null, allHr) : 0;
+  const hrRange = (hrMax - hrMin) || 1;
+
+  // 시간순(오름차순)으로 직전 회차 심박수 매핑
+  const asc = PL_WORKOUTS.slice().sort(function(a,b){
+    return a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
+  });
+  const prevHrMap = {};
+  let lastHr = null;
+  asc.forEach(function(w){
+    if(lastHr != null) prevHrMap[w.id] = lastHr;
+    if(w.avgHr != null) lastHr = w.avgHr;
+  });
+
+  // 월별 그룹핑
+  const months = {};
+  const monthOrder = [];
+  PL_WORKOUTS.forEach(function(w){
     const d = plFromISO(w.date);
-    const monthKey = d.getFullYear()+'-'+d.getMonth();
-    if(monthKey!==lastMonthKey){
-      html += '<div class="sec-label" style="margin-top:'+(lastMonthKey===null?'6px':'28px')+';">'+d.getFullYear()+'년 '+(d.getMonth()+1)+'월</div>';
-      lastMonthKey = monthKey;
+    const key = d.getFullYear()+'-'+String(d.getMonth()).padStart(2,'0');
+    if(!months[key]){ months[key] = { y:d.getFullYear(), m:d.getMonth(), items:[] }; monthOrder.push(key); }
+    months[key].items.push(w);
+  });
+  monthOrder.sort(function(a,b){ return b.localeCompare(a); });
+
+  function monthStats(items){
+    const dur = items.reduce(function(a,w){ return a+w.duration; },0);
+    const hrs = items.map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
+    return { count:items.length, dur:dur, avgHr: hrs.length ? plAvg(hrs) : null };
+  }
+
+  let html = '';
+  monthOrder.forEach(function(key, mi){
+    const mo = months[key];
+    const st = monthStats(mo.items);
+    // 지난달 대비 평균심박수
+    let hrDelta = '';
+    if(mi+1 < monthOrder.length && st.avgHr != null){
+      const prevSt = monthStats(months[monthOrder[mi+1]].items);
+      if(prevSt.avgHr != null){
+        const diff = Math.round(st.avgHr - prevSt.avgHr);
+        if(diff !== 0){
+          const cls = diff < 0 ? 'down' : 'up';
+          hrDelta = ' <span class="h-row-delta '+cls+'">'+(diff<0?'\u25BC':'\u25B2')+Math.abs(diff)+'</span>';
+        }
+      }
     }
-    const dateLabel = (d.getMonth()+1)+'/'+d.getDate()+'<br><span style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);font-weight:400;">'+wdLabels[d.getDay()]+'</span>';
-    html += '<div class="pl-hist-item" onclick="plOpenDetail(\''+w.id+'\')">'+
-      '<div class="pl-hist-date">'+dateLabel+'</div>'+
-      '<div class="pl-hist-main"><div class="pl-hist-type">'+w.type+'</div>'+
-      '<div class="pl-hist-hr">'+(w.avgHr?Math.round(w.avgHr)+' bpm':'-')+(w.distance!=null?' · '+w.distance.toFixed(1)+'km':'')+'</div></div>'+
-      '<div class="pl-hist-right"><div class="pl-hist-dur">'+w.duration.toFixed(1)+'분</div></div></div>';
+    html += '<div class="mon-sum">'+
+      '<div class="mon-sum-top">'+
+        '<span class="mon-sum-ttl">'+mo.y+'년 '+(mo.m+1)+'월</span>'+
+        '<span class="mon-sum-hr">'+(st.avgHr!=null?Math.round(st.avgHr)+' bpm':'-')+hrDelta+'</span>'+
+      '</div>'+
+      '<div class="mon-sum-stats">'+st.count+'회 · '+st.dur.toFixed(0)+'분'+
+        (st.count?' · 회당 '+(st.dur/st.count).toFixed(0)+'분':'')+'</div>'+
+    '</div>';
+
+    // 막대 기준값: 그 달 최대 운동시간
+    const maxDur = Math.max.apply(null, mo.items.map(function(w){ return w.duration; }).concat([1]));
+
+    // 주차별 그룹핑
+    const weeks = {};
+    const weekOrder = [];
+    mo.items.forEach(function(w){
+      const d = plFromISO(w.date);
+      const wk = Math.ceil((d.getDate() + new Date(mo.y, mo.m, 1).getDay()) / 7);
+      if(!weeks[wk]){ weeks[wk] = []; weekOrder.push(wk); }
+      weeks[wk].push(w);
+    });
+    weekOrder.sort(function(a,b){ return b-a; });
+
+    weekOrder.forEach(function(wk){
+      const items = weeks[wk].slice().sort(function(a,b){
+        return b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
+      });
+      const wdur = items.reduce(function(a,w){ return a+w.duration; },0);
+      html += '<div class="wk-sum">'+
+        '<span class="wk-sum-lbl">'+wk+'주차</span>'+
+        '<span class="wk-sum-line"></span>'+
+        '<span class="wk-sum-val">'+items.length+'회 · '+wdur.toFixed(0)+'분</span>'+
+      '</div>';
+
+      items.forEach(function(w){
+        const d = plFromISO(w.date);
+        // 델타
+        let deltaHtml = '';
+        if(w.avgHr != null && prevHrMap[w.id] != null){
+          const diff = Math.round(w.avgHr - prevHrMap[w.id]);
+          if(diff === 0){
+            deltaHtml = '<span class="h-row-delta same">-</span>';
+          } else {
+            const cls = diff < 0 ? 'down' : 'up';
+            deltaHtml = '<span class="h-row-delta '+cls+'">'+(diff<0?'\u25BC':'\u25B2')+Math.abs(diff)+'</span>';
+          }
+        }
+        // 막대 색상: 내 심박수 범위 안에서의 상대 강도
+        let barColor = 'var(--green)';
+        if(w.avgHr != null && allHr.length > 1){
+          const pos = (w.avgHr - hrMin) / hrRange;
+          barColor = pos > 0.66 ? 'var(--red)' : (pos > 0.33 ? 'var(--amber)' : 'var(--green)');
+        }
+        const barPct = Math.max(4, (w.duration/maxDur*100));
+        const typeTag = (w.type !== mainType) ? '<span class="h-row-tag">'+w.type+'</span>' : '';
+
+        html += '<div class="h-row" onclick="plOpenDetail(\''+w.id+'\')">'+
+          '<div class="h-row-top">'+
+            '<div class="h-row-date">'+
+              '<div class="h-row-day">'+d.getDate()+'</div>'+
+              '<div class="h-row-wd">'+wdLabels[d.getDay()]+'</div>'+
+            '</div>'+
+            '<div class="h-row-hero">'+
+              (w.avgHr!=null
+                ? '<span class="h-row-hr">'+Math.round(w.avgHr)+'</span><span class="h-row-hrunit">bpm</span>'
+                : '<span class="h-row-hr" style="color:var(--text-faint)">--</span>')+
+              deltaHtml + typeTag +
+            '</div>'+
+            '<div class="h-row-side">'+
+              w.duration.toFixed(0)+'분'+
+              (w.distance!=null ? '<br>'+w.distance.toFixed(1)+'km' : '')+
+            '</div>'+
+          '</div>'+
+          '<div class="h-row-bar"><span style="width:'+barPct+'%;background:'+barColor+'"></span></div>'+
+        '</div>';
+      });
+    });
   });
   wrap.innerHTML = html;
 }
