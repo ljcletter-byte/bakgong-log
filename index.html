@@ -3,473 +3,531 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>박동일지 - 심박수로 보는 나의 운동</title>
+<title>박동일지 - 건강 코치 앱</title>
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#3aa655">
+<meta name="theme-color" content="#18b981">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Caveat:wght@600;700&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-.pl-app{
-  --bg:#f6fbef;
+:root{
+  --bg:#f8fafc;
   --surface:#ffffff;
-  --surface-2:#e9f5df;
-  --border:#d3ecc6;
-  --text:#1f3320;
-  --text-dim:#5c7a5a;
-  --text-faint:#6b8f68;
-  --zone1:#2f9bd6;
-  --zone2:#1fa6a0;
-  --zone3:#4caf50;
-  --zone4:#f2a71b;
-  --zone5:#ef5b52;
-  --move:#f2a71b;
-  --exercise:#3aa655;
-  --stand:#2f9bd6;
-  --danger:#e35446;
-  --on-accent:#f5fff2;
-  --radius-lg:18px;
-  --radius-md:14px;
-  --radius-sm:10px;
-  --f-serif:'Fraunces',serif;
-  --f-hand:'Caveat',cursive;
-  --f-display:'Space Grotesk',sans-serif;
-  --f-body:'Inter',sans-serif;
-  --f-mono:'JetBrains Mono',monospace;
-  font-family:var(--f-body);
-  background:#e2f2d8;
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  padding:32px 16px;
-  box-sizing:border-box;
-  color:var(--text);
+  --surface-2:#f1f5f9;
+  --border:#e2e8f0;
+  --text:#0f172a;
+  --text-dim:#64748b;
+  --text-faint:#94a3b8;
+  --accent:#18b981;
+  --accent-dark:#059669;
+  --accent-light:#d1fae5;
+  --blue:#3b82f6;
+  --blue-light:#dbeafe;
+  --orange:#f59e0b;
+  --orange-light:#fef3c7;
+  --red:#ef4444;
+  --red-light:#fee2e2;
+  --danger:#ef4444;
+  --on-accent:#ffffff;
+  --radius-xl:24px;
+  --radius-lg:16px;
+  --radius-md:12px;
+  --radius-sm:8px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:0 12px 32px rgba(0,0,0,0.10),0 4px 8px rgba(0,0,0,0.04);
 }
-.pl-app *{box-sizing:border-box;}
-.pl-phone{
-  width:100%;max-width:410px;background:var(--bg);border-radius:var(--radius-lg);
-  border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;
-  min-height:800px;position:relative;box-shadow:0 30px 60px rgba(66,50,26,0.25);
-}
-.pl-phone::before,.pl-phone::after{content:'';position:absolute;border-radius:50%;
-  filter:blur(46px);z-index:-1;pointer-events:none;}
-.pl-phone::before{width:280px;height:280px;background:rgba(58,166,85,0.16);top:-70px;right:-80px;}
-.pl-phone::after{width:240px;height:240px;background:rgba(47,155,214,0.14);bottom:140px;left:-90px;}
-.pl-storage-banner{background:rgba(227,84,70,0.1);color:var(--danger);font-size:11px;
-  line-height:1.5;padding:9px 14px;margin:0 22px 6px;border-radius:12px;font-family:var(--f-mono);}
-.pl-topbar{padding:22px 22px 10px;}
-.pl-brand{font-family:var(--f-serif);font-style:italic;font-weight:700;font-size:26px;letter-spacing:-0.01em;color:var(--exercise);}
-.pl-tagline{font-family:var(--f-hand);font-size:16px;color:var(--text-dim);margin-top:0;}
-.pl-settings-btn{background:none;border:1px solid var(--border);border-radius:10px;
-  width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0;}
-.pl-screens{flex:1;overflow-y:auto;padding:4px 22px 110px;}
-.pl-screen{display:none;}
-.pl-screen.pl-active{display:block;animation:plFade .25s ease;}
-@keyframes plFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.pl-tabbar{
-  position:absolute;bottom:0;left:0;right:0;display:flex;
-  background:rgba(255,253,248,0.96);backdrop-filter:blur(6px);
-  border-top:1px dashed var(--border);padding:10px 8px 14px;
-}
-.pl-tab{flex:1;background:none;border:none;color:var(--text-faint);display:flex;
-  flex-direction:column;align-items:center;gap:4px;font-family:var(--f-body);
-  font-size:11px;padding:6px 0;cursor:pointer;transition:color .15s ease;}
-.pl-tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;}
-.pl-tab.pl-tab-active{color:var(--exercise);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Pretendard',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0;}
+.app{width:100%;max-width:480px;min-height:100vh;background:var(--surface);
+  display:flex;flex-direction:column;position:relative;overflow:hidden;}
+input,button,textarea{font-family:inherit;}
 
-
-.pl-h{font-family:var(--f-serif);font-style:italic;font-weight:600;font-size:15px;margin:22px 0 12px;
-  color:var(--text-dim);letter-spacing:0.01em;padding-bottom:6px;border-bottom:1px dashed var(--border);}
-.pl-weekstrip{display:flex;justify-content:space-between;margin:18px 0 22px;}
-.pl-day{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
-.pl-day-label{font-size:10px;color:var(--text-faint);font-family:var(--f-mono);}
-.pl-day-dot{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);
-  font-family:var(--f-mono);}
-.pl-day-dot.pl-has{background:var(--exercise);border-color:var(--exercise);color:var(--on-accent);font-weight:700;}
-.pl-day-dot.pl-today{box-shadow:0 0 0 2px var(--move);}
-.pl-hero-card{background:var(--surface);border:1px solid var(--border);
-  border-radius:32px 18px 30px 16px/20px 30px 16px 26px;
-  padding:18px 20px;margin:8px 0 20px;display:flex;align-items:center;gap:16px;
-  box-shadow:0 4px 14px rgba(66,50,26,0.08);}
-.pl-hero-text{flex:1;min-width:0;}
-.pl-hero-date{font-family:var(--f-serif);font-weight:700;font-size:19px;color:var(--text);}
-.pl-hero-tagline{font-family:var(--f-hand);font-size:19px;color:var(--exercise);margin-top:1px;line-height:1.1;}
-.pl-hero-meta{font-family:var(--f-mono);font-size:11px;color:var(--text-dim);margin-top:9px;}
-.pl-ring-wrap{position:relative;display:flex;justify-content:center;margin:8px 0 20px;}
-.pl-ring-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
-.pl-ring-center .pl-big{font-family:var(--f-display);font-weight:700;font-size:32px;}
-.pl-ring-center .pl-sub{font-family:var(--f-mono);font-size:11px;color:var(--text-dim);margin-top:2px;}
-.pl-cardrow{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;}
-.pl-statcard{flex:0 0 136px;background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius-md);padding:14px;box-shadow:0 3px 10px rgba(66,50,26,0.06);}
-.pl-statcard .pl-label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
-.pl-statcard .pl-value{font-family:var(--f-display);font-weight:700;font-size:21px;margin-top:8px;}
-.pl-statcard .pl-delta{font-family:var(--f-mono);font-size:10px;margin-top:5px;color:var(--text-faint);}
-.pl-delta.pl-up{color:var(--danger);}
-.pl-delta.pl-down{color:var(--stand);}
-.pl-empty{text-align:center;padding:44px 10px;color:var(--text-dim);font-size:13px;line-height:1.6;}
-.pl-empty .pl-empty-title{font-family:var(--f-serif);font-style:italic;font-weight:700;font-size:18px;
-  color:var(--text);margin-bottom:8px;}
-.pl-goalcard{background:var(--surface);border:1px solid var(--border);
-  border-radius:26px 14px 24px 12px/16px 24px 12px 20px;
-  padding:14px 16px;margin-bottom:18px;}
-.pl-goalbar{height:10px;border-radius:6px;background:var(--surface-2);overflow:hidden;margin-bottom:10px;}
-.pl-goalbar span{display:block;height:100%;border-radius:6px;}
-.pl-goal-row{display:flex;justify-content:space-between;align-items:center;
-  font-family:var(--f-mono);font-size:13px;color:var(--text-dim);}
-.pl-goal-streak{color:var(--zone5);font-weight:600;}
-.pl-seed-btn{padding:10px 18px;border-radius:14px;border:1px solid var(--border);
-  background:var(--surface-2);color:var(--stand);font-size:12px;cursor:pointer;font-family:var(--f-body);}
-.pl-cta{width:100%;padding:15px;border-radius:22px 14px 20px 14px;border:none;
-  background:linear-gradient(135deg,#5fc97a,var(--exercise) 60%,#2d8a45);
-  box-shadow:0 6px 16px rgba(58,166,85,0.28);
-  color:var(--on-accent);font-weight:600;font-family:var(--f-body);font-size:15px;cursor:pointer;
-  margin-top:6px;margin-bottom:20px;}
-.pl-cta:active{transform:scale(0.98);}
-.pl-field{margin-bottom:18px;}
-.pl-field label{display:block;font-family:var(--f-hand);font-size:15px;color:var(--text-dim);margin-bottom:2px;}
-.pl-field input[type=text],.pl-field input[type=number],.pl-field input[type=date],.pl-field input[type=time],.pl-field textarea{
-  width:100%;background:none;border:none;border-bottom:1.5px solid var(--border);border-radius:0;
-  padding:8px 2px;color:var(--text);font-family:var(--f-mono);font-size:15px;}
-.pl-field input:focus{outline:none;border-bottom-color:var(--exercise);}
-.pl-field textarea{font-family:var(--f-body);resize:vertical;min-height:56px;border:1px solid var(--border);
-  border-radius:10px;padding:10px 12px;}
-.pl-duration-display{font-family:var(--f-mono);font-size:13px;color:var(--exercise);
-  margin:-6px 0 16px;font-weight:500;}
-.pl-chiprow{display:flex;gap:8px;flex-wrap:wrap;}
-.pl-chip{padding:9px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);
-  color:var(--text-dim);font-size:13px;cursor:pointer;}
-.pl-chip.pl-sel{background:var(--exercise);color:var(--on-accent);border-color:var(--exercise);font-weight:600;}
-.pl-range-row{display:flex;align-items:center;gap:12px;}
-.pl-app input[type=range]{flex:1;accent-color:var(--exercise);}
-.pl-range-val{font-family:var(--f-mono);font-weight:600;min-width:22px;text-align:center;}
-.pl-error{color:var(--danger);font-size:12px;margin-top:2px;margin-bottom:14px;display:none;}
-.pl-error.pl-show{display:block;}
-.pl-hist-item{display:flex;align-items:flex-start;gap:14px;padding:13px 2px;
-  border-bottom:1px dashed var(--border);cursor:pointer;background:none;}
-.pl-hist-item:last-child{border-bottom:none;}
-.pl-hist-date{font-family:var(--f-serif);font-weight:700;font-size:14px;color:var(--exercise);
-  flex-shrink:0;width:58px;line-height:1.3;}
-.pl-hist-main{flex:1;min-width:0;}
-.pl-hist-type{font-size:14px;font-weight:500;color:var(--text);}
-.pl-hist-right{text-align:right;flex-shrink:0;}
-.pl-hist-dur{font-family:var(--f-display);font-weight:700;font-size:15px;color:var(--text);}
-.pl-hist-hr{font-family:var(--f-mono);font-size:11px;color:var(--stand);margin-top:2px;}
-.pl-overlay{position:absolute;inset:0;background:var(--bg);z-index:20;display:none;
-  flex-direction:column;padding:22px;overflow-y:auto;}
-.pl-overlay.pl-show{display:flex;}
-.pl-overlay-close{align-self:flex-end;background:var(--surface);border:1px solid var(--border);
-  color:var(--text);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;cursor:pointer;margin-bottom:6px;font-size:18px;line-height:1;
-  padding:0;font-family:inherit;}
-.pl-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
-.pl-detail-cell{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;}
-.pl-detail-cell .pl-label{font-size:11px;color:var(--text-dim);}
-.pl-detail-cell .pl-value{font-family:var(--f-display);font-weight:700;font-size:18px;margin-top:4px;}
-.pl-memo-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:12px;margin-top:14px;font-size:13px;color:var(--text-dim);white-space:pre-wrap;}
-.pl-delete-btn{width:100%;padding:13px;border-radius:14px;border:1px solid var(--danger);
-  background:none;color:var(--danger);font-weight:600;margin-top:10px;cursor:pointer;font-family:var(--f-body);font-size:14px;}
-.pl-toggle{display:flex;background:var(--surface);border-radius:14px;padding:4px;margin:6px 0 18px;}
-.pl-toggle button{flex:1;padding:9px;border:none;background:none;color:var(--text-dim);
-  border-radius:10px;font-size:13px;cursor:pointer;font-family:var(--f-body);}
-.pl-toggle button.pl-sel{background:var(--surface-2);color:var(--text);font-weight:600;}
-.pl-summarygrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
-.pl-sumcell{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;
-  box-shadow:0 3px 10px rgba(66,50,26,0.06);}
-.pl-sumcell .pl-label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.06em;
-  font-family:var(--f-body);font-weight:600;display:flex;align-items:center;gap:5px;}
-.pl-sumcell .pl-value{font-family:var(--f-display);font-weight:700;font-size:22px;margin-top:8px;color:var(--text);}
-.pl-heat-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
-.pl-heat-cell{aspect-ratio:1;border-radius:6px;background:var(--surface);display:flex;
-  align-items:center;justify-content:center;font-size:9px;color:var(--text-faint);font-family:var(--f-mono);}
-.pl-heat-cell.pl-out{opacity:0.2;}
-.pl-heat-legend{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:10px;
-  color:var(--text-faint);font-family:var(--f-mono);}
-.pl-legend-box{width:10px;height:10px;border-radius:3px;}
-.pl-weekbars{display:flex;align-items:flex-end;gap:8px;height:140px;margin-bottom:6px;}
-.pl-weekbar-col{flex:1;display:flex;flex-direction:column-reverse;border-radius:6px;
-  overflow:hidden;background:var(--surface-2);}
-.pl-weekbar-col span{width:100%;}
-.pl-weekbars-labels{display:flex;gap:8px;margin-bottom:20px;}
-.pl-weekbars-labels span{flex:1;text-align:center;font-size:10px;color:var(--text-faint);font-family:var(--f-mono);}
-.pl-trendrow{margin-bottom:10px;}
-.pl-trend-label{font-size:11px;color:var(--text-dim);font-family:var(--f-mono);
-  margin-bottom:4px;display:flex;justify-content:space-between;}
-.pl-trendbar{display:flex;height:14px;border-radius:6px;overflow:hidden;background:var(--surface-2);}
-.pl-trendbar span{height:100%;}
-.pl-onboard-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;}
-.pl-onboard-dot-active{background:var(--exercise);}
-.pl-toast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px 18px;
-  border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:all .25s ease;z-index:30;
-  max-width:82%;text-align:center;white-space:normal;}
-.pl-toast.pl-show{opacity:1;transform:translateX(-50%) translateY(0);}
-.pl-loading-spinner{position:absolute;inset:0;background:var(--bg);z-index:35;
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px 12px;background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:10;}
+.topbar-logo{font-size:18px;font-weight:800;color:var(--accent);letter-spacing:-0.03em;}
+.topbar-sub{font-size:11px;color:var(--text-faint);margin-top:1px;}
+.icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface);color:var(--text-dim);font-size:16px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;}
-.pl-loading-spinner.pl-hide{display:none;}
-.pl-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--border);
-  border-top-color:var(--exercise);animation:plSpin .8s linear infinite;}
-@keyframes plSpin{to{transform:rotate(360deg);}}
-@media (prefers-reduced-motion: reduce){
-  .pl-screen.pl-active{animation:none;}
-  .pl-hist-item{transition:none;}
-  .pl-spinner{animation-duration:2.2s;}
-}
-@media (min-width: 860px){
-  .pl-app{align-items:center;padding:40px 24px;}
-  .pl-phone{
-    max-width:1080px;min-height:auto;height:calc(100vh - 80px);
-    display:grid;grid-template-columns:220px 1fr;grid-template-rows:auto auto 1fr;
-    grid-template-areas:"topbar topbar" "banner banner" "nav content";
-    border-radius:24px;box-shadow:0 30px 70px rgba(66,50,26,0.22);
-  }
-  .pl-topbar{grid-area:topbar;padding:26px 32px 14px;border-bottom:1px solid var(--border);}
-  #pl-storage-banner{grid-area:banner;margin:14px 32px 0;}
-  .pl-tabbar{
-    grid-area:nav;position:static;flex-direction:column;background:var(--surface);
-    border-top:none;border-right:1px dashed var(--border);padding:24px 14px;gap:6px;
-    backdrop-filter:none;height:100%;
-  }
-  .pl-tab{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;
-    padding:12px 14px;border-radius:12px;font-size:13px;}
-  .pl-tab.pl-tab-active{background:var(--surface-2);}
-  .pl-tab svg{width:20px;height:20px;}
-  .pl-screens{grid-area:content;padding:28px 40px 40px;max-width:920px;}
-  .pl-cardrow{overflow-x:visible;flex-wrap:wrap;}
-  .pl-statcard{flex:1 1 200px;box-shadow:0 6px 18px rgba(66,50,26,0.1);
-    border-left:3px solid var(--exercise);}
-  .pl-summarygrid{grid-template-columns:repeat(5,1fr);}
-  .pl-sumcell{box-shadow:0 6px 18px rgba(66,50,26,0.1);border-left:3px solid var(--stand);}
-  .pl-detail-grid{grid-template-columns:repeat(4,1fr);}
-  .pl-detail-cell{box-shadow:0 4px 14px rgba(66,50,26,0.08);}
-  .pl-hist-item, .pl-heat-cell{transition:transform .12s ease;}
-  .pl-hist-item:hover{transform:translateX(2px);}
+
+/* ── BOTTOM TABS ── */
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;
+  background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);display:flex;padding:8px 0 max(8px,env(safe-area-inset-bottom));}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;border:none;cursor:pointer;padding:4px 0;color:var(--text-faint);
+  font-size:10px;font-weight:500;transition:color .15s;}
+.tab-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;}
+.tab-btn.active{color:var(--accent);}
+.tab-btn.active svg{stroke:var(--accent);}
+
+/* ── SCREEN ── */
+.screen{display:none;flex:1;overflow-y:auto;padding:20px 20px 100px;}
+.screen.active{display:block;animation:fadeUp .2s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.screen.active{animation:none;}}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:12px;font-weight:700;color:var(--text-faint);
+  text-transform:uppercase;letter-spacing:0.08em;margin:24px 0 10px;}
+.section-title:first-child{margin-top:0;}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:16px;box-shadow:var(--shadow-sm);}
+.card+.card{margin-top:10px;}
+.card-row{display:flex;align-items:center;gap:12px;}
+
+/* ── 오늘 화면 ── */
+.today-hero{background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+  border-radius:var(--radius-xl);padding:24px;color:#fff;margin-bottom:12px;
+  box-shadow:0 8px 24px rgba(24,185,129,0.28);}
+.today-hero-date{font-size:12px;opacity:0.8;margin-bottom:4px;}
+.today-hero-msg{font-size:18px;font-weight:700;line-height:1.4;margin-bottom:16px;}
+.today-hero-stats{display:flex;gap:16px;}
+.today-hero-stat .val{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.today-hero-stat .lbl{font-size:11px;opacity:0.75;margin-top:2px;}
+.goal-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;
+  font-size:13px;font-weight:500;color:var(--text-dim);}
+.goal-bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-bottom:14px;}
+.goal-bar span{display:block;height:100%;border-radius:3px;background:var(--accent);}
+.streak-badge{display:inline-flex;align-items:center;gap:5px;background:var(--orange-light);
+  color:#92400e;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.stat-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;box-shadow:var(--shadow-sm);}
+.stat-cell .lbl{font-size:10px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+.stat-cell .val{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);}
+.stat-cell .unit{font-size:12px;font-weight:500;color:var(--text-dim);}
+.stat-cell .delta{font-size:11px;color:var(--text-faint);margin-top:3px;}
+.week-strip{display:flex;gap:6px;margin-bottom:4px;}
+.week-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+.week-day .d-label{font-size:10px;color:var(--text-faint);}
+.week-day .d-dot{width:32px;height:32px;border-radius:10px;background:var(--surface-2);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;
+  color:var(--text-dim);border:1px solid var(--border);}
+.week-day .d-dot.done{background:var(--accent);color:#fff;border-color:var(--accent);}
+.week-day .d-dot.today{box-shadow:0 0 0 2px var(--accent);}
+
+/* ── 기록 화면 ── */
+.form-label{font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:6px;display:block;}
+.form-input{width:100%;background:var(--surface-2);border:1.5px solid var(--border);
+  border-radius:var(--radius-md);padding:11px 14px;font-size:15px;color:var(--text);
+  transition:border-color .15s;}
+.form-input:focus{outline:none;border-color:var(--accent);background:var(--surface);}
+.form-group{margin-bottom:16px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.chip{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);
+  color:var(--text-dim);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;}
+.chip.sel{background:var(--accent-light);color:var(--accent-dark);border-color:var(--accent);font-weight:700;}
+.calc-display{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:16px;min-height:18px;}
+.form-hint{font-size:11px;color:var(--text-faint);margin-top:-10px;margin-bottom:16px;}
+.form-divider{border:none;border-top:1px solid var(--border);margin:20px 0;}
+.rpe-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.rpe-row input[type=range]{flex:1;accent-color:var(--accent);}
+.rpe-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;min-width:40px;text-align:right;}
+.optional-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);
+  cursor:pointer;margin-bottom:16px;user-select:none;}
+.optional-section{display:none;}
+.optional-section.open{display:block;}
+
+/* ── 히스토리 화면 ── */
+.month-header{font-size:13px;font-weight:700;color:var(--text-dim);padding:8px 0 4px;
+  border-bottom:1px solid var(--border);margin-bottom:2px;}
+.hist-item{display:flex;align-items:center;gap:14px;padding:13px 0;
+  border-bottom:1px dashed var(--border);cursor:pointer;}
+.hist-item:last-child{border-bottom:none;}
+.hist-date{flex-shrink:0;text-align:center;width:40px;}
+.hist-date .md{font-size:15px;font-weight:700;color:var(--accent);}
+.hist-date .wd{font-size:10px;color:var(--text-faint);}
+.hist-main{flex:1;min-width:0;}
+.hist-type{font-size:14px;font-weight:600;}
+.hist-meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
+.hist-right{text-align:right;flex-shrink:0;}
+.hist-dur{font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+
+/* ── 분석 화면 ── */
+.period-toggle{display:flex;background:var(--surface-2);border-radius:var(--radius-md);
+  padding:3px;margin-bottom:16px;}
+.period-toggle button{flex:1;padding:8px;border:none;background:none;border-radius:10px;
+  font-size:13px;font-weight:500;color:var(--text-dim);cursor:pointer;transition:all .15s;}
+.period-toggle button.sel{background:var(--surface);color:var(--text);font-weight:700;
+  box-shadow:var(--shadow-sm);}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.sum-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:14px;box-shadow:var(--shadow-sm);}
+.sum-cell .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+  color:var(--text-faint);margin-bottom:6px;}
+.sum-cell .val{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.sum-cell .unit{font-size:12px;font-weight:500;color:var(--text-dim);}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:16px;box-shadow:var(--shadow-sm);margin-bottom:10px;}
+.chart-title{font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:12px;}
+.week-bars{display:flex;align-items:flex-end;gap:6px;height:100px;margin-bottom:4px;}
+.week-bar-col{flex:1;display:flex;flex-direction:column-reverse;border-radius:4px;overflow:hidden;background:var(--surface-2);}
+.week-bar-col span{width:100%;background:var(--accent);}
+.week-bars-labels{display:flex;gap:6px;}
+.week-bars-labels span{flex:1;text-align:center;font-size:10px;color:var(--text-faint);}
+.trend-row{margin-bottom:8px;}
+.trend-row-lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-bottom:3px;}
+.trend-bar{height:8px;border-radius:4px;overflow:hidden;background:var(--surface-2);}
+.trend-bar span{display:block;height:100%;border-radius:4px;background:var(--accent);}
+.heat-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;}
+.heat-cell{aspect-ratio:1;border-radius:6px;background:var(--surface-2);display:flex;
+  align-items:center;justify-content:center;font-size:9px;color:var(--text-faint);}
+.heat-legend{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-faint);}
+.heat-legend-box{width:10px;height:10px;border-radius:3px;}
+.coach-card{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;
+  border-radius:var(--radius-lg);padding:16px;margin-bottom:10px;}
+.coach-msg{font-size:14px;font-weight:500;color:#065f46;line-height:1.6;}
+.coach-note{font-size:10px;color:#6ee7b7;margin-top:10px;}
+.ai-coach-btn{width:100%;padding:13px;border-radius:var(--radius-md);border:1.5px solid var(--accent);
+  background:none;color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;}
+.ai-result{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;
+  border-radius:var(--radius-lg);padding:16px;margin-bottom:10px;}
+.ai-result-msg{font-size:14px;color:#1e40af;line-height:1.6;}
+.ai-result-note{font-size:10px;color:#93c5fd;margin-top:8px;}
+.body-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:16px;box-shadow:var(--shadow-sm);margin-bottom:10px;}
+.bmi-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+  padding:4px 10px;border-radius:20px;margin-top:4px;}
+.bmi-badge.normal{background:var(--accent-light);color:var(--accent-dark);}
+.bmi-badge.warn{background:var(--orange-light);color:#92400e;}
+.bmi-badge.danger{background:var(--red-light);color:#991b1b;}
+
+/* ── 공통 버튼 ── */
+.btn-primary{width:100%;padding:15px;border-radius:var(--radius-lg);border:none;
+  background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 12px rgba(24,185,129,0.3);transition:transform .1s;}
+.btn-primary:active{transform:scale(0.98);}
+.btn-secondary{width:100%;padding:13px;border-radius:var(--radius-lg);border:1.5px solid var(--border);
+  background:none;color:var(--text-dim);font-size:14px;font-weight:600;cursor:pointer;}
+.btn-danger{border:1.5px solid var(--red);color:var(--red);background:none;
+  width:100%;padding:12px;border-radius:var(--radius-lg);font-size:14px;font-weight:600;cursor:pointer;}
+.btn-sm{padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;}
+.form-error{color:var(--red);font-size:12px;margin-bottom:12px;display:none;}
+.form-error.show{display:block;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-faint);}
+.empty-state .emoji{font-size:40px;margin-bottom:12px;}
+.empty-state .ttl{font-size:16px;font-weight:700;color:var(--text-dim);margin-bottom:6px;}
+.empty-state .desc{font-size:13px;line-height:1.6;}
+
+/* ── OVERLAYS ── */
+.overlay{position:fixed;top:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;height:100%;background:var(--surface);z-index:50;
+  display:none;flex-direction:column;overflow-y:auto;padding:20px 20px 40px;}
+.overlay.open{display:flex;}
+.overlay-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.overlay-title{font-size:18px;font-weight:800;}
+.overlay-close{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+  background:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:#0f172a;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;
+  opacity:0;pointer-events:none;transition:all .25s;z-index:60;white-space:normal;
+  max-width:80%;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── SPINNER ── */
+.spinner-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.8);z-index:55;
+  display:flex;align-items:center;justify-content:center;}
+.spinner-overlay.hide{display:none;}
+.spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);
+  border-top-color:var(--accent);animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(prefers-reduced-motion:reduce){.spinner{animation-duration:2s;}}
+
+/* ── LOGIN SCREEN ── */
+.login-screen{position:fixed;inset:0;background:var(--surface);z-index:80;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;}
+.login-screen.hide{display:none;}
+.login-logo{font-size:36px;font-weight:800;color:var(--accent);margin-bottom:6px;}
+.login-tagline{font-size:14px;color:var(--text-dim);margin-bottom:40px;text-align:center;}
+.login-btn-google{display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;max-width:320px;padding:14px;border-radius:var(--radius-lg);
+  border:1.5px solid var(--border);background:var(--surface);font-size:15px;font-weight:600;
+  cursor:pointer;box-shadow:var(--shadow-sm);margin-bottom:12px;}
+.login-migrate{width:100%;max-width:320px;}
+.login-migrate label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;}
+.login-footer{font-size:11px;color:var(--text-faint);text-align:center;margin-top:20px;line-height:1.6;}
+.login-error{color:var(--red);font-size:12px;text-align:center;margin-top:10px;display:none;}
+.login-error.show{display:block;}
+
+/* ── DESKTOP ── */
+@media(min-width:860px){
+  body{background:#f1f5f9;padding:32px 16px;}
+  .app{border-radius:24px;min-height:auto;height:calc(100vh - 64px);
+    box-shadow:0 20px 60px rgba(0,0,0,0.12);}
+  .tabbar{position:absolute;border-radius:0 0 24px 24px;}
+  .overlay{position:absolute;border-radius:24px;}
+  .toast{position:absolute;}
+  .spinner-overlay{position:absolute;border-radius:24px;}
+  .login-screen{position:absolute;border-radius:24px;}
+  .summary-grid{grid-template-columns:repeat(4,1fr);}
 }
 </style>
 </head>
+
 <body>
 
-<div class="pl-app">
-  <div class="pl-phone">
-    <div class="pl-topbar" style="display:flex;justify-content:space-between;align-items:flex-start;">
-      <div>
-        <div class="pl-brand">박동일지</div>
-        <div class="pl-tagline">심박수로 보는 나의 운동</div>
-      </div>
-      <button type="button" class="pl-settings-btn" onclick="plOpenSettings()" aria-label="목표 설정 열기">⚙️</button>
-    </div>
-    <div id="pl-storage-banner" class="pl-storage-banner" style="display:none;">
-      클라우드 저장소에 연결할 수 없어요. 인터넷 연결을 확인해주세요. 기록이 새로고침 후 사라질 수 있어요.
-    </div>
-
-    <div id="pl-sync-gate" class="pl-overlay pl-show" style="z-index:40;">
-      <div style="margin-top:60px;text-align:center;">
-        <div class="pl-brand" style="justify-content:center;display:flex;font-size:26px;margin-bottom:8px;">박동일지</div>
-        <div style="color:var(--text-dim);font-size:13px;margin-bottom:32px;">
-          구글 계정으로 로그인하면<br>컴퓨터와 폰에서 같은 기록을 볼 수 있어요.
-        </div>
-        <button type="button" class="pl-cta" onclick="plSignInGoogle()">🔵 Google로 로그인</button>
-        <div class="pl-field" style="text-align:left;margin-top:20px;">
-          <label>이전 동기화 코드가 있다면 입력해서 데이터 가져오기 (선택)</label>
-          <input type="text" id="pl-migrate-code" placeholder="예: bakdong7" style="text-transform:lowercase;">
-        </div>
-        <div id="pl-sync-error" class="pl-error" style="text-align:center;margin-top:14px;"></div>
-        <div style="font-family:var(--f-mono);font-size:11px;color:var(--text-faint);margin-top:20px;">
-          로그인하면 <a href="./privacy.html" target="_blank" style="color:var(--stand);">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
-        </div>
-      </div>
-    </div>
-
-    <div class="pl-screens">
-
-      <section id="scr-home" class="pl-screen pl-active">
-        <div class="pl-h" style="margin-top:6px;">이번 주</div>
-        <div class="pl-weekstrip" id="pl-weekstrip"></div>
-        <div id="pl-goal-wrap"></div>
-        <div id="pl-hero-wrap"></div>
-        <div class="pl-h">트렌드</div>
-        <div class="pl-cardrow" id="pl-cardrow"></div>
-        <button class="pl-cta" onclick="plGoTab('add')">+ 기록 추가</button>
-        <button type="button" class="pl-seed-btn" style="width:100%;margin-bottom:20px;" onclick="plShareWeekImage()">이번 주 요약 이미지로 저장</button>
-
-        <div class="pl-h">몸무게</div>
-        <div id="pl-body-wrap"></div>
-
-        <div class="pl-h">쿨다운·보완 운동 추천</div>
-        <div class="pl-hero-card" style="display:block;margin-bottom:20px;">
-          <div class="pl-hero-tagline" style="font-size:17px;">🧘 라이딩 후 스트레칭</div>
-          <div class="pl-hero-meta" style="margin-top:10px;line-height:1.9;">
-            · 고관절 굴곡근: 런지 자세 15~30초, 좌우<br>
-            · 대퇴사두근: 서서 발목 당기기 15~30초, 좌우<br>
-            · 햄스트링: 다리 뻗고 상체 숙이기 15~30초<br>
-            · 종아리: 벽 짚고 뒤꿈치 눌러주기 15~30초
-          </div>
-          <div class="pl-hero-tagline" style="font-size:17px;margin-top:18px;">💪 페달링 보완 근력 (주 2~3회)</div>
-          <div class="pl-hero-meta" style="margin-top:10px;line-height:1.9;">
-            · 스쿼트 · 런지 · 힙 쓰러스트 · 플랭크
-          </div>
-          <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:14px;">일반적인 가이드예요. 통증이 있다면 전문가와 상담하세요.</div>
-        </div>
-      </section>
-
-      <section id="scr-add" class="pl-screen">
-        <div class="pl-h" style="margin-top:6px;" id="pl-add-title">기록 추가</div>
-        <div class="pl-h" style="margin-top:6px;">운동 종류</div>
-        <div class="pl-chiprow" id="pl-type-chips"></div>
-
-        <div class="pl-h">기본 정보</div>
-        <div class="pl-field"><label>날짜</label><input type="date" id="f-date"></div>
-        <div class="pl-field" style="display:flex;gap:10px;">
-          <div style="flex:1;"><label>시작 시간</label>
-            <input type="time" step="1" id="f-start" oninput="plComputeDuration()"></div>
-          <div style="flex:1;"><label>종료 시간</label>
-            <input type="time" step="1" id="f-end" oninput="plComputeDuration()"></div>
-        </div>
-        <div class="pl-duration-display" id="pl-duration-display">시작/종료 시간을 입력해주세요</div>
-        <input type="hidden" id="f-duration" value="">
-        <div class="pl-field" style="display:flex;gap:10px;">
-          <div style="flex:1;"><label>평균 심박수</label><input type="number" id="f-avghr" placeholder="예: 102"></div>
-          <div style="flex:1;"><label>최고 심박수</label><input type="number" id="f-maxhr" placeholder="예: 118"></div>
-        </div>
-        <div class="pl-field" style="display:flex;gap:10px;">
-          <div style="flex:1;"><label>활동 칼로리</label><input type="number" id="f-kcalact" placeholder="예: 118"></div>
-          <div style="flex:1;"><label>총 칼로리</label><input type="number" id="f-kcaltotal" placeholder="예: 167"></div>
-        </div>
-        <div class="pl-field">
-          <label>거리 (km)</label><input type="number" step="0.01" id="f-distance" oninput="plUpdateSpeedDisplay()" placeholder="예: 9.8">
-          <div class="pl-duration-display" id="pl-speed-display" style="margin-top:8px;margin-bottom:0;">거리를 입력하면 평균 속도가 자동 계산돼요.</div>
-        </div>
-
-        <div class="pl-h">체감 강도 (RPE) <span style="font-family:var(--f-mono);font-size:11px;color:var(--text-faint);">선택사항</span></div>
-        <div class="pl-range-row">
-          <input type="range" min="1" max="10" value="5" id="f-rpe" oninput="plUpdateRpe()">
-          <span class="pl-range-val" id="pl-rpe-val">미입력</span>
-        </div>
-
-        <div class="pl-h">메모</div>
-        <div class="pl-field"><textarea id="f-memo" placeholder="컨디션, 특이사항을 적어보세요"></textarea></div>
-
-        <div class="pl-error" id="pl-form-error">운동 종류, 날짜, 시작/종료 시간은 꼭 입력해주세요.</div>
-        <button class="pl-cta" id="pl-save-btn" onclick="plSaveWorkout()">저장하기</button>
-        <button type="button" class="pl-seed-btn" id="pl-cancel-edit-btn" style="width:100%;display:none;" onclick="plCancelEdit()">수정 취소</button>
-      </section>
-
-      <section id="scr-history" class="pl-screen">
-        <div class="pl-h" style="margin-top:6px;">전체 기록</div>
-        <div id="pl-history-list"></div>
-      </section>
-
-      <section id="scr-stats" class="pl-screen">
-        <div class="pl-toggle">
-          <button class="pl-sel" data-period="week" onclick="plSetPeriod('week')">최근 7일</button>
-          <button data-period="month" onclick="plSetPeriod('month')">이번 달</button>
-        </div>
-        <div class="pl-summarygrid" id="pl-summary-grid"></div>
-        <div id="pl-monthly-challenge"></div>
-        <div class="pl-h" style="margin-top:6px;">코치의 피드백</div>
-        <div id="pl-coach-feedback"></div>
-        <div class="pl-h">AI 코칭 <span style="font-family:var(--f-mono);font-size:11px;color:var(--text-faint);">베타</span></div>
-        <div id="pl-ai-coach"></div>
-        <div class="pl-h">이번 달 vs 지난달</div>
-        <div id="pl-month-compare"></div>
-        <div class="pl-h">심박수·강도 추이</div>
-        <div id="pl-hr-trend-chart"></div>
-        <div class="pl-h">체중 추이</div>
-        <div id="pl-weight-trend-chart"></div>
-        <div id="pl-stats-chart-area"></div>
-        <div class="pl-h">최근 운동 평균 심박수 비교</div>
-        <div id="pl-trend-rows"></div>
-      </section>
-
-    </div>
-
-    <nav class="pl-tabbar">
-      <button class="pl-tab pl-tab-active" data-tab="home" onclick="plGoTab('home')">
-        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
-        <span>홈</span>
-      </button>
-      <button class="pl-tab" data-tab="add" onclick="plGoTab('add')">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span>기록</span>
-      </button>
-      <button class="pl-tab" data-tab="history" onclick="plGoTab('history')">
-        <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="4" cy="18" r="1.2"/></svg>
-        <span>히스토리</span>
-      </button>
-      <button class="pl-tab" data-tab="stats" onclick="plGoTab('stats')">
-        <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="12" width="3" height="7"/><rect x="11" y="8" width="3" height="11"/><rect x="16" y="4" width="3" height="15"/></svg>
-        <span>통계</span>
-      </button>
-    </nav>
-
-    <div id="pl-detail-overlay" class="pl-overlay">
-      <button type="button" class="pl-overlay-close" onclick="plCloseDetail()" aria-label="닫기">&times;</button>
-      <div id="pl-detail-content"></div>
-    </div>
-
-    <div id="pl-onboarding-overlay" class="pl-overlay" style="z-index:45;">
-      <div style="margin-top:80px;text-align:center;" id="pl-onboard-content"></div>
-      <div style="margin-top:auto;padding-bottom:10px;">
-        <button type="button" class="pl-cta" id="pl-onboard-next-btn" onclick="plOnboardNext()">다음</button>
-        <button type="button" class="pl-seed-btn" style="width:100%;border:none;background:none;color:var(--text-faint);box-shadow:none;" onclick="plCloseOnboarding()">건너뛰기</button>
-      </div>
-    </div>
-
-    <div id="pl-body-overlay" class="pl-overlay">
-      <button type="button" class="pl-overlay-close" onclick="plCloseBodyLog()" aria-label="닫기">&times;</button>
-      <div class="pl-h" style="margin-top:6px;">몸무게 기록</div>
-      <div class="pl-field"><label>날짜</label><input type="date" id="b-date"></div>
-      <div class="pl-field"><label>몸무게 (kg)</label><input type="number" step="0.1" id="b-weight" placeholder="예: 68.5" oninput="plUpdateBmiPreview()"></div>
-      <div id="b-bmi-display" class="pl-duration-display">키를 설정에 입력하면 BMI가 자동 계산돼요.</div>
-      <button type="button" class="pl-cta" onclick="plSaveBodyLog()">저장</button>
-    </div>
-
-    <div id="pl-settings-overlay" class="pl-overlay">
-      <button type="button" class="pl-overlay-close" onclick="plCloseSettings()" aria-label="닫기">&times;</button>
-      <div class="pl-h" style="margin-top:6px;">프로필</div>
-      <div class="pl-field"><label>키 (cm)</label><input type="number" id="s-height" step="0.1" placeholder="예: 170"></div>
-
-      <div class="pl-h">목표 설정</div>
-      <div class="pl-field"><label>일일 목표 운동시간 (분)</label><input type="number" id="s-daily-min" step="5"></div>
-      <div class="pl-field"><label>월간 목표 일수 (일)</label><input type="number" id="s-monthly-days" step="1"></div>
-      <div class="pl-field"><label>주간 누적 목표 (분)</label><input type="number" id="s-weekly-min" step="10"></div>
-      <div class="pl-field"><label>월간 목표 거리 (km)</label><input type="number" id="s-monthly-km" step="5"></div>
-      <button type="button" class="pl-cta" onclick="plSaveSettings()">저장</button>
-
-      <div class="pl-h">AI 코칭 <span style="font-family:var(--f-mono);font-size:11px;color:var(--text-faint);">선택</span></div>
-      <div class="pl-field"><label>나만의 Claude API 키</label><input type="password" id="s-api-key" placeholder="sk-ant-..."></div>
-      <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-bottom:10px;line-height:1.6;">
-        이 키는 이 브라우저에만 저장되고 서버로 전송되지 않아요. 사용료는 본인 계정으로 청구됩니다.
-        <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--stand);">키 발급받기</a>
-      </div>
-      <button type="button" class="pl-seed-btn" style="width:100%;margin-bottom:16px;" onclick="plSaveApiKey()">키 저장</button>
-
-      <div class="pl-h">계정</div>
-      <div id="pl-account-info" class="pl-hero-meta" style="margin-bottom:12px;"></div>
-      <button type="button" class="pl-seed-btn" style="width:100%;" onclick="plSignOut()">로그아웃</button>
-      <a href="./privacy.html" target="_blank" style="display:block;text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-faint);margin-top:16px;">개인정보처리방침 보기</a>
-
-      <div class="pl-h">데이터 백업</div>
-      <div style="display:flex;gap:10px;margin-bottom:14px;">
-        <button type="button" class="pl-seed-btn" style="flex:1;" onclick="plExportJSON()">JSON 내보내기</button>
-        <button type="button" class="pl-seed-btn" style="flex:1;" onclick="plExportCSV()">CSV 내보내기</button>
-      </div>
-      <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-bottom:14px;">삭제하기 전에 미리 백업해두는 걸 추천해요.</div>
-
-      <div id="pl-delete-account-zone" style="margin-top:14px;"></div>
-    </div>
-
-    <div class="pl-toast" id="pl-toast" role="status" aria-live="polite"></div>
-    <div id="pl-loading-spinner" class="pl-loading-spinner pl-hide"><div class="pl-spinner"></div></div>
+<!-- 로그인 화면 -->
+<div class="login-screen" id="login-screen">
+  <div class="login-logo">박동일지</div>
+  <div class="login-tagline">심박수와 체중으로 보는<br>나만의 건강 코치</div>
+  <button class="login-btn-google" onclick="plSignInGoogle()">
+    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.96L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+    Google로 로그인
+  </button>
+  <div class="login-migrate">
+    <label>이전 동기화 코드 (선택)</label>
+    <input class="form-input" type="text" id="pl-migrate-code" placeholder="이전 코드가 있으면 입력하세요" style="text-transform:lowercase;">
   </div>
+  <div class="login-footer">
+    로그인하면 <a href="./privacy.html" target="_blank" style="color:var(--accent);">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
+  </div>
+  <div class="login-error" id="pl-sync-error">로그인에 실패했어요. 다시 시도해주세요.</div>
 </div>
+
+<!-- 스피너 -->
+<div class="spinner-overlay hide" id="pl-loading-spinner"><div class="spinner"></div></div>
+
+<!-- 저장소 경고 -->
+<div id="pl-storage-banner" style="background:#fee2e2;color:#991b1b;font-size:12px;padding:8px 16px;display:none;">
+  클라우드 저장소에 연결할 수 없어요. 인터넷 연결을 확인해주세요.
+</div>
+
+<!-- 상단바 -->
+<div class="topbar">
+  <div>
+    <div class="topbar-logo">박동일지</div>
+    <div class="topbar-sub" id="pl-topbar-user">건강 코치 앱</div>
+  </div>
+  <button class="icon-btn" onclick="plOpenSettings()" aria-label="설정">⚙️</button>
+</div>
+
+<!-- 화면들 -->
+<section class="screen active" id="scr-today">
+  <div id="today-hero-wrap"></div>
+  <div class="section-title">이번 주</div>
+  <div class="card" style="padding:14px;">
+    <div class="week-strip" id="pl-weekstrip"></div>
+  </div>
+  <div id="pl-goal-wrap"></div>
+  <div class="section-title">트렌드</div>
+  <div class="stat-grid" id="pl-cardrow"></div>
+  <div id="pl-body-wrap"></div>
+  <div class="section-title">오늘의 루틴 추천</div>
+  <div class="card" id="pl-routine-card">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🧘 라이딩 후 스트레칭</div>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.8;">
+      · 고관절 굴곡근: 런지 자세 15~30초, 좌우<br>
+      · 대퇴사두근: 서서 발목 당기기 15~30초, 좌우<br>
+      · 햄스트링: 다리 뻗고 상체 숙이기 15~30초<br>
+      · 종아리: 벽 짚고 뒤꿈치 눌러주기 15~30초
+    </div>
+    <div style="font-size:14px;font-weight:600;margin:14px 0 8px;">💪 페달링 보완 근력 (주 2~3회)</div>
+    <div style="font-size:13px;color:var(--text-dim);">스쿼트 · 런지 · 힙 쓰러스트 · 플랭크</div>
+    <div style="font-size:11px;color:var(--text-faint);margin-top:10px;">일반적인 가이드예요. 통증이 있다면 전문가와 상담하세요.</div>
+  </div>
+  <div style="margin-top:16px;">
+    <button class="btn-secondary" onclick="plShareWeekImage()">이번 주 요약 이미지 저장</button>
+  </div>
+</section>
+
+<section class="screen" id="scr-add">
+  <div style="font-size:18px;font-weight:800;margin-bottom:20px;" id="pl-add-title">운동 기록</div>
+  <div class="section-title">운동 종류</div>
+  <div class="chip-row" id="pl-type-chips"></div>
+  <div class="section-title">기본 정보</div>
+  <div class="form-group">
+    <label class="form-label">날짜</label>
+    <input class="form-input" type="date" id="f-date">
+  </div>
+  <div class="form-row">
+    <div>
+      <label class="form-label">시작 시간</label>
+      <input class="form-input" type="time" step="1" id="f-start" oninput="plComputeDuration()">
+    </div>
+    <div>
+      <label class="form-label">종료 시간</label>
+      <input class="form-input" type="time" step="1" id="f-end" oninput="plComputeDuration()">
+    </div>
+  </div>
+  <div class="calc-display" id="pl-duration-display">시작/종료 시간을 입력해주세요</div>
+  <input type="hidden" id="f-duration">
+  <div class="form-row">
+    <div>
+      <label class="form-label">평균 심박수</label>
+      <input class="form-input" type="number" id="f-avghr" placeholder="예: 108">
+    </div>
+    <div>
+      <label class="form-label">거리 (km)</label>
+      <input class="form-input" type="number" step="0.01" id="f-distance" oninput="plUpdateSpeedDisplay()" placeholder="예: 9.8">
+    </div>
+  </div>
+  <div class="calc-display" id="pl-speed-display" style="margin-top:-10px;">거리를 입력하면 속도가 자동 계산돼요.</div>
+  <div style="margin-bottom:16px;">
+    <div class="optional-toggle" onclick="plToggleOptional()" id="opt-toggle">
+      <span>▶</span> 더 입력하기 (칼로리·최고심박수·메모)
+    </div>
+    <div class="optional-section" id="opt-section">
+      <div class="form-row">
+        <div>
+          <label class="form-label">최고 심박수</label>
+          <input class="form-input" type="number" id="f-maxhr" placeholder="예: 118">
+        </div>
+        <div>
+          <label class="form-label">활동 칼로리</label>
+          <input class="form-input" type="number" id="f-kcalact" placeholder="예: 118">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">총 칼로리</label>
+        <input class="form-input" type="number" id="f-kcaltotal" placeholder="예: 167">
+      </div>
+      <div class="form-group">
+        <label class="form-label">체감 강도 (RPE) <span style="font-size:11px;color:var(--text-faint);">선택</span></label>
+        <div class="rpe-row">
+          <input type="range" min="1" max="10" value="5" id="f-rpe" oninput="plUpdateRpe()">
+          <span class="rpe-val" id="pl-rpe-val">미입력</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">메모</label>
+        <textarea class="form-input" id="f-memo" rows="3" placeholder="컨디션, 특이사항"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="form-error" id="pl-form-error">운동 종류, 날짜, 시작/종료 시간은 꼭 입력해주세요.</div>
+  <button class="btn-primary" id="pl-save-btn" onclick="plSaveWorkout()">저장하기</button>
+  <button type="button" class="btn-secondary" id="pl-cancel-edit-btn" style="display:none;margin-top:8px;" onclick="plCancelEdit()">수정 취소</button>
+</section>
+
+<section class="screen" id="scr-history">
+  <div style="font-size:18px;font-weight:800;margin-bottom:20px;">전체 기록</div>
+  <div id="pl-history-list"></div>
+</section>
+
+<section class="screen" id="scr-stats">
+  <div class="period-toggle" style="margin-bottom:16px;">
+    <button class="sel" data-period="week" onclick="plSetPeriod('week')">최근 7일</button>
+    <button data-period="month" onclick="plSetPeriod('month')">이번 달</button>
+  </div>
+  <div class="summary-grid" id="pl-summary-grid"></div>
+  <div id="pl-monthly-challenge"></div>
+  <div class="section-title">코치의 피드백</div>
+  <div id="pl-coach-feedback"></div>
+  <div class="section-title">AI 코칭 <span style="font-size:10px;color:var(--text-faint);">베타</span></div>
+  <div id="pl-ai-coach"></div>
+  <div class="section-title">이번 달 vs 지난달</div>
+  <div id="pl-month-compare"></div>
+  <div class="section-title">심박수·강도 추이</div>
+  <div id="pl-hr-trend-chart"></div>
+  <div class="section-title">체중 추이</div>
+  <div id="pl-weight-trend-chart"></div>
+  <div id="pl-stats-chart-area"></div>
+  <div class="section-title">최근 운동 평균 심박수 비교</div>
+  <div id="pl-trend-rows"></div>
+</section>
+
+<!-- 하단 탭바 -->
+<nav class="tabbar">
+  <button class="tab-btn active" data-tab="today" onclick="plGoTab('today')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    오늘
+  </button>
+  <button class="tab-btn" data-tab="add" onclick="plGoTab('add')">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    기록
+  </button>
+  <button class="tab-btn" data-tab="history" onclick="plGoTab('history')">
+    <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/></svg>
+    기록장
+  </button>
+  <button class="tab-btn" data-tab="stats" onclick="plGoTab('stats')">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    분석
+  </button>
+</nav>
+
+<!-- 기록 상세 오버레이 -->
+<div class="overlay" id="pl-detail-overlay">
+  <div class="overlay-header">
+    <div class="overlay-title">기록 상세</div>
+    <button class="overlay-close" onclick="plCloseDetail()" aria-label="닫기">×</button>
+  </div>
+  <div id="pl-detail-content"></div>
+</div>
+
+<!-- 설정 오버레이 -->
+<div class="overlay" id="pl-settings-overlay">
+  <div class="overlay-header">
+    <div class="overlay-title">설정</div>
+    <button class="overlay-close" onclick="plCloseSettings()" aria-label="닫기">×</button>
+  </div>
+  <div class="section-title">프로필</div>
+  <div class="form-group"><label class="form-label">키 (cm)</label><input class="form-input" type="number" id="s-height" step="0.1" placeholder="예: 170"></div>
+  <div class="section-title">목표</div>
+  <div class="form-row">
+    <div><label class="form-label">일일 목표 (분)</label><input class="form-input" type="number" id="s-daily-min" step="5"></div>
+    <div><label class="form-label">월간 목표 (일)</label><input class="form-input" type="number" id="s-monthly-days" step="1"></div>
+  </div>
+  <div class="form-row">
+    <div><label class="form-label">주간 목표 (분)</label><input class="form-input" type="number" id="s-weekly-min" step="10"></div>
+    <div><label class="form-label">월간 거리 (km)</label><input class="form-input" type="number" id="s-monthly-km" step="5"></div>
+  </div>
+  <button class="btn-primary" onclick="plSaveSettings()" style="margin-bottom:20px;">저장</button>
+  <div class="section-title">AI 코칭 <span style="font-size:10px;color:var(--text-faint);">선택</span></div>
+  <div class="form-group"><label class="form-label">나만의 Claude API 키</label><input class="form-input" type="password" id="s-api-key" placeholder="sk-ant-..."></div>
+  <div style="font-size:11px;color:var(--text-faint);margin-bottom:10px;line-height:1.6;">이 키는 이 브라우저에만 저장돼요. <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent);">키 발급받기</a></div>
+  <button class="btn-secondary" onclick="plSaveApiKey()" style="margin-bottom:20px;">키 저장</button>
+  <div class="section-title">계정</div>
+  <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;" id="pl-account-info"></div>
+  <button class="btn-secondary" onclick="plSignOut()" style="margin-bottom:8px;">로그아웃</button>
+  <a href="./privacy.html" target="_blank" style="display:block;text-align:center;font-size:12px;color:var(--text-faint);margin-bottom:20px;">개인정보처리방침</a>
+  <div class="section-title">데이터</div>
+  <div style="display:flex;gap:8px;margin-bottom:8px;">
+    <button class="btn-sm" style="flex:1;" onclick="plExportJSON()">JSON 내보내기</button>
+    <button class="btn-sm" style="flex:1;" onclick="plExportCSV()">CSV 내보내기</button>
+  </div>
+  <div style="font-size:11px;color:var(--text-faint);margin-bottom:16px;">삭제 전 미리 백업을 추천해요.</div>
+  <div id="pl-delete-account-zone"></div>
+</div>
+
+<!-- 몸무게 기록 오버레이 -->
+<div class="overlay" id="pl-body-overlay">
+  <div class="overlay-header">
+    <div class="overlay-title">몸무게 기록</div>
+    <button class="overlay-close" onclick="plCloseBodyLog()" aria-label="닫기">×</button>
+  </div>
+  <div class="form-group"><label class="form-label">날짜</label><input class="form-input" type="date" id="b-date"></div>
+  <div class="form-group"><label class="form-label">몸무게 (kg)</label><input class="form-input" type="number" step="0.1" id="b-weight" placeholder="예: 68.5" oninput="plUpdateBmiPreview()"></div>
+  <div class="calc-display" id="b-bmi-display">키를 설정에 입력하면 BMI가 자동 계산돼요.</div>
+  <button class="btn-primary" onclick="plSaveBodyLog()">저장</button>
+</div>
+
+<!-- 온보딩 오버레이 -->
+<div class="overlay" id="pl-onboarding-overlay">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;" id="pl-onboard-content"></div>
+  <button class="btn-primary" id="pl-onboard-next-btn" onclick="plOnboardNext()">다음</button>
+  <button class="btn-secondary" onclick="plCloseOnboarding()" style="margin-top:8px;">건너뛰기</button>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="pl-toast" role="status" aria-live="polite"></div>
+
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-
 <script>
+
 const PL_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAVYoiJ3x79GIoVuQAY58xWnbGBcJNaay4",
   authDomain: "bakdong-log.firebaseapp.com",
@@ -560,7 +618,7 @@ function plNormalizeCode(raw){
 
 async function plSignInGoogle(){
   const errEl = document.getElementById('pl-sync-error');
-  errEl.classList.remove('pl-show');
+  errEl.classList.remove('open');
   try{
     const provider = new firebase.auth.GoogleAuthProvider();
     await firebase.auth().signInWithPopup(provider);
@@ -568,7 +626,7 @@ async function plSignInGoogle(){
   }catch(e){
     console.error('google sign-in failed', e);
     errEl.textContent = '로그인에 실패했어요. 다시 시도해주세요.';
-    errEl.classList.add('pl-show');
+    errEl.classList.add('open');
   }
 }
 
@@ -688,6 +746,8 @@ async function plLoad(){
   const acctInfo = document.getElementById('pl-account-info');
   const user = firebase.auth().currentUser;
   if(acctInfo && user){ acctInfo.textContent = (user.email || '구글 계정') + '으로 로그인됨'; }
+  const topUser = document.getElementById('pl-topbar-user');
+  if(topUser && user){ topUser.textContent = user.email || '구글 계정'; }
   plRenderHome();
   plRenderHistory();
   plRenderStats();
@@ -726,7 +786,7 @@ function plOnboardNext(){
 }
 
 function plCloseOnboarding(){
-  document.getElementById('pl-onboarding-overlay').classList.remove('pl-show');
+  document.getElementById('pl-onboarding-overlay').classList.remove('open');
   try{ localStorage.setItem('pl-onboarding-seen', '1'); }catch(e){}
 }
 
@@ -736,7 +796,7 @@ function plMaybeShowOnboarding(){
   if(!seen){
     PL_ONBOARD_STEP = 0;
     plRenderOnboardSlide();
-    document.getElementById('pl-onboarding-overlay').classList.add('pl-show');
+    document.getElementById('pl-onboarding-overlay').classList.add('open');
   }
 }
 
@@ -756,12 +816,13 @@ async function plPersist(){
 let PL_EDIT_ID = null;
 
 function plGoTab(tab){
-  document.querySelectorAll('.pl-screen').forEach(function(s){ s.classList.remove('pl-active'); });
-  document.getElementById('scr-'+tab).classList.add('pl-active');
-  document.querySelectorAll('.pl-tab').forEach(function(b){ b.classList.remove('pl-tab-active'); });
-  document.querySelector('.pl-tab[data-tab="'+tab+'"]').classList.add('pl-tab-active');
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  var scr = document.getElementById('scr-'+tab) || document.getElementById('scr-today');
+  scr.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.querySelector('.tab-btn[data-tab="'+tab+'"]');
+  if(btn) btn.classList.add('active');
   if(tab==='add' && !PL_EDIT_ID){ plResetForm(); }
-  document.querySelector('.pl-screens').scrollTop = 0;
 }
 
 function plBuildTypeChips(){
@@ -851,7 +912,7 @@ function plResetForm(){
   PL_RPE_TOUCHED = false;
   document.getElementById('pl-rpe-val').textContent = '미입력';
   document.getElementById('f-memo').value = '';
-  document.getElementById('pl-form-error').classList.remove('pl-show');
+  document.getElementById('pl-form-error').classList.remove('open');
 }
 
 function plCancelEdit(){
@@ -890,7 +951,7 @@ function plStartEdit(id){
   document.getElementById('scr-add').classList.add('pl-active');
   document.querySelectorAll('.pl-tab').forEach(function(b){ b.classList.remove('pl-tab-active'); });
   document.querySelector('.pl-tab[data-tab="add"]').classList.add('pl-tab-active');
-  document.querySelector('.pl-screens').scrollTop = 0;
+  
 }
 
 async function plSaveWorkout(){
@@ -898,10 +959,10 @@ async function plSaveWorkout(){
   const duration = parseFloat(document.getElementById('f-duration').value);
   const err = document.getElementById('pl-form-error');
   if(!plSelectedType || !date || !duration || duration<=0){
-    err.classList.add('pl-show');
+    err.classList.add('open');
     return;
   }
-  err.classList.remove('pl-show');
+  err.classList.remove('open');
   const avgHr = parseFloat(document.getElementById('f-avghr').value);
   const maxHr = parseFloat(document.getElementById('f-maxhr').value);
   const kcalAct = parseFloat(document.getElementById('f-kcalact').value);
@@ -976,9 +1037,9 @@ let plToastTimer = null;
 function plToast(msg){
   const t = document.getElementById('pl-toast');
   t.textContent = msg;
-  t.classList.add('pl-show');
+  t.classList.add('open');
   clearTimeout(plToastTimer);
-  plToastTimer = setTimeout(function(){ t.classList.remove('pl-show'); }, msg.length>20 ? 3200 : 1800);
+  plToastTimer = setTimeout(function(){ t.classList.remove('open'); }, msg.length>20 ? 3200 : 1800);
 }
 
 function plRingSVG(w, size){
@@ -1048,27 +1109,33 @@ function plIntensityLabel(w){
 }
 
 function plRenderHero(){
-  const wrap = document.getElementById('pl-hero-wrap');
+  const wrap = document.getElementById('today-hero-wrap');
+  if(!wrap) return;
   const w = plLatestWorkout();
+  const today = new Date();
+  const dateStr = (today.getMonth()+1)+'월 '+today.getDate()+'일 '+['일','월','화','수','목','금','토'][today.getDay()]+'요일';
+  const streak = plComputeStreak();
   if(!w){
-    wrap.innerHTML = '<div class="pl-empty"><div class="pl-empty-title">첫 페이지를 남겨보세요</div>'+
-      '운동을 마치면 시간과 심박수를 적어보세요.<br>평균 심박수에 따라 도장 색이 달라져요.'+
-      '<div style="margin-top:16px;"><button type="button" class="pl-seed-btn" onclick="plSeedWeek()">예시로 일주일치 채워보기</button></div></div>';
+    wrap.innerHTML = '<div class="today-hero">'+
+      '<div class="today-hero-date">'+dateStr+'</div>'+
+      '<div class="today-hero-msg">첫 기록을 남겨보세요! 🏃</div>'+
+      (streak>0?'<div class="streak-badge">🔥 '+streak+'일 연속</div>':'')+
+    '</div>'+
+    '<div style="margin-bottom:12px;"><button class="btn-secondary" onclick="plSeedWeek()">예시 일주일치 채워보기</button></div>';
     return;
   }
   const d = plFromISO(w.date);
-  const dateStr = (d.getMonth()+1)+'월 '+d.getDate()+'일의 기록';
-  const ring = plRingSVG(w, 96);
+  const isToday = w.date === plToday();
   const intensity = plIntensityLabel(w);
-  wrap.innerHTML = '<div class="pl-hero-card">'+
-    '<div class="pl-hero-text">'+
-      '<div class="pl-hero-date">'+dateStr+'</div>'+
-      '<div class="pl-hero-tagline">'+w.type+' '+w.duration.toFixed(0)+'분 탔어요</div>'+
-      '<div class="pl-hero-meta">'+(w.avgHr?Math.round(w.avgHr)+' bpm 평균':'심박수 없음')+(w.distance!=null?' · '+w.distance.toFixed(1)+'km':'')+(intensity?' · '+intensity:'')+'</div>'+
+  wrap.innerHTML = '<div class="today-hero">'+
+    '<div class="today-hero-date">'+dateStr+(isToday?' · 최근 기록':'')+'</div>'+
+    '<div class="today-hero-msg">'+w.type+' '+w.duration.toFixed(0)+'분 탔어요 '+(intensity==='강도 높음'?'🔥':(intensity==='강도 보통'?'💪':'🌿'))+'</div>'+
+    '<div class="today-hero-stats">'+
+    '<div class="today-hero-stat"><div class="val">'+(w.avgHr?Math.round(w.avgHr):'--')+'</div><div class="lbl">평균 심박수</div></div>'+
+    (w.distance!=null?'<div class="today-hero-stat"><div class="val">'+w.distance.toFixed(1)+'</div><div class="lbl">km</div></div>':'')+
+    '<div class="today-hero-stat"><div class="val">'+w.duration.toFixed(0)+'</div><div class="lbl">분</div></div>'+
     '</div>'+
-    '<div class="pl-ring-wrap" style="margin:0;">'+ring+
-      '<div class="pl-ring-center"><div class="pl-big" style="font-size:15px;">'+(w.avgHr?Math.round(w.avgHr):'--')+'</div></div>'+
-    '</div>'+
+    (streak>0?'<div class="streak-badge" style="margin-top:12px;">🔥 '+streak+'일 연속</div>':'')+
   '</div>';
 }
 
@@ -1178,7 +1245,7 @@ function plOpenSettings(){
   try{ savedKey = localStorage.getItem('pl-api-key') || ''; }catch(e){}
   document.getElementById('s-api-key').value = savedKey;
   plRenderDeleteAccountButton();
-  document.getElementById('pl-settings-overlay').classList.add('pl-show');
+  document.getElementById('pl-settings-overlay').classList.add('open');
 }
 
 function plSaveApiKey(){
@@ -1191,7 +1258,7 @@ function plSaveApiKey(){
 }
 
 function plCloseSettings(){
-  document.getElementById('pl-settings-overlay').classList.remove('pl-show');
+  document.getElementById('pl-settings-overlay').classList.remove('open');
 }
 
 async function plSaveSettings(){
@@ -1306,11 +1373,11 @@ function plOpenBodyLog(){
   document.getElementById('b-date').value = plToday();
   document.getElementById('b-weight').value = '';
   plUpdateBmiPreview();
-  document.getElementById('pl-body-overlay').classList.add('pl-show');
+  document.getElementById('pl-body-overlay').classList.add('open');
 }
 
 function plCloseBodyLog(){
-  document.getElementById('pl-body-overlay').classList.remove('pl-show');
+  document.getElementById('pl-body-overlay').classList.remove('open');
 }
 
 function plUpdateBmiPreview(){
@@ -1395,7 +1462,7 @@ function plOpenDetail(id){
     '<button type="button" class="pl-cta" style="margin-top:20px;margin-bottom:0;" onclick="plStartEdit(\''+id+'\')">수정하기</button>'+
     '<div id="pl-delete-zone"></div>';
   plRenderDeleteButton(id);
-  document.getElementById('pl-detail-overlay').classList.add('pl-show');
+  document.getElementById('pl-detail-overlay').classList.add('open');
 }
 
 function plRenderDeleteButton(id){
@@ -1424,7 +1491,7 @@ async function plDeleteWorkout(id){
 }
 
 function plCloseDetail(){
-  document.getElementById('pl-detail-overlay').classList.remove('pl-show');
+  document.getElementById('pl-detail-overlay').classList.remove('open');
 }
 
 function plSetPeriod(p){
@@ -1812,18 +1879,31 @@ function plRenderTrendRows(){
   }).join('');
 }
 
+
+function plToggleOptional(){
+  var sec = document.getElementById('opt-section');
+  var tog = document.getElementById('opt-toggle');
+  if(sec.classList.contains('open')){
+    sec.classList.remove('open');
+    tog.innerHTML = '<span>▶</span> 더 입력하기 (칼로리·최고심박수·메모)';
+  } else {
+    sec.classList.add('open');
+    tog.innerHTML = '<span>▼</span> 더 입력하기 (칼로리·최고심박수·메모)';
+  }
+}
+
 function plInit(){
   plBuildTypeChips();
   document.getElementById('f-date').value = plToday();
   firebase.auth().onAuthStateChanged(function(user){
     if(user){
       PL_SYNC_CODE = user.uid;
-      document.getElementById('pl-sync-gate').classList.remove('pl-show');
+      document.getElementById('login-screen').classList.remove('open');
       plLoad();
     } else {
       PL_SYNC_CODE = null;
       PL_WORKOUTS = [];
-      document.getElementById('pl-sync-gate').classList.add('pl-show');
+      document.getElementById('login-screen').classList.add('open');
     }
   });
 }
@@ -1835,6 +1915,7 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(function(){});
   });
 }
+
 </script>
 </body>
 </html>
