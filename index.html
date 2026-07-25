@@ -605,6 +605,7 @@ let PL_WORKOUTS = [];
 let PL_BODYLOGS = [];
 let plSelectedType = null;
 let plCurrentPeriod = 'week';
+let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50, heightCm:null };
 
 function plPad(n){ return n<10 ? '0'+n : ''+n; }
 function plToISO(d){ return d.getFullYear()+'-'+plPad(d.getMonth()+1)+'-'+plPad(d.getDate()); }
