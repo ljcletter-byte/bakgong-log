@@ -1009,11 +1009,14 @@ function plStartEdit(id){
   if(w.rpe != null){ PL_RPE_TOUCHED = true; plUpdateRpe(); }
   else { PL_RPE_TOUCHED = false; document.getElementById('pl-rpe-val').textContent = '미입력'; }
   document.getElementById('f-memo').value = w.memo || '';
-  document.querySelectorAll('.pl-screen').forEach(function(s){ s.classList.remove('pl-active'); });
-  document.getElementById('scr-add').classList.add('pl-active');
-  document.querySelectorAll('.pl-tab').forEach(function(b){ b.classList.remove('pl-tab-active'); });
-  document.querySelector('.pl-tab[data-tab="add"]').classList.add('pl-tab-active');
-  
+  if(w.maxHr!=null || w.kcalActive!=null || w.kcalTotal!=null || w.rpe!=null || w.memo){
+    document.getElementById('opt-section').classList.add('open');
+    document.getElementById('opt-toggle').innerHTML = '<span>▼</span> 더 입력하기 (칼로리·최고심박수·메모)';
+  } else {
+    document.getElementById('opt-section').classList.remove('open');
+    document.getElementById('opt-toggle').innerHTML = '<span>▶</span> 더 입력하기 (칼로리·최고심박수·메모)';
+  }
+  plGoTab('add');
 }
 
 async function plSaveWorkout(){
