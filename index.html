@@ -38,9 +38,26 @@
   --sh-md:0 4px 16px rgba(0,0,0,0.08);
   --sh-lg:0 12px 36px rgba(0,0,0,0.10);
 }
+body.dark{
+  --bg:#0f1420;
+  --surface:#171d2b;
+  --surface-2:#1f2636;
+  --border:#2a3345;
+  --text:#e5e9f0;
+  --text-dim:#9aa4b8;
+  --text-faint:#6b7688;
+  --green-l:#0c3a2e;
+  --blue-l:#0f2a4a;
+  --amber-l:#3a2a08;
+  --red-l:#3a1414;
+  --purple-l:#2a2040;
+  --sh-sm:0 1px 4px rgba(0,0,0,0.3);
+  --sh-md:0 4px 16px rgba(0,0,0,0.35);
+  --sh-lg:0 12px 36px rgba(0,0,0,0.4);
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Pretendard',system-ui,sans-serif;background:var(--bg);color:var(--text);
-  min-height:100vh;display:flex;justify-content:center;}
+  min-height:100vh;display:flex;justify-content:center;transition:background 0.2s,color 0.2s;}
 input,button,textarea,select{font-family:inherit;}
 
 /* ── APP SHELL ── */
@@ -476,6 +493,10 @@ input,button,textarea,select{font-family:inherit;}
         </div>
       </div>
       <div class="form-group"><label class="form-lbl">메모</label><textarea class="form-input" id="f-memo" rows="3" placeholder="컨디션, 특이사항"></textarea></div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="f-warmup" style="width:18px;height:18px;">
+        <label class="form-lbl" for="f-warmup" style="margin:0;">워밍업·쿨다운을 했어요</label>
+      </div>
     </div>
     <div class="form-error" id="pl-form-error">운동 종류, 날짜, 시작/종료 시간을 입력해주세요.</div>
     <button class="btn-primary" id="pl-save-btn" onclick="plSaveWorkout()">저장하기</button>
@@ -486,6 +507,18 @@ input,button,textarea,select{font-family:inherit;}
   <!-- 기록장 탭 -->
   <section class="screen" id="scr-history">
     <div style="font-size:20px;font-weight:800;margin-bottom:16px;">기록장</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <select class="form-input" id="pl-history-type-filter" style="flex:1;" onchange="plSetHistoryTypeFilter(this.value)">
+        <option value="all">전체 종류</option>
+        <option value="실내자전거">실내자전거</option>
+        <option value="러닝">러닝</option>
+        <option value="걷기">걷기</option>
+        <option value="기타">기타</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);white-space:nowrap;">
+        <input type="checkbox" id="pl-history-month-only" onchange="plSetHistoryMonthOnly(this.checked)"> 이번 달만
+      </label>
+    </div>
     <div id="pl-history-list"></div>
   </section>
 
@@ -499,10 +532,14 @@ input,button,textarea,select{font-family:inherit;}
     <div id="pl-monthly-challenge"></div>
     <div class="sec-label">코치의 피드백</div>
     <div id="pl-coach-feedback"></div>
-    <div class="sec-label">AI 코칭 <span style="font-size:10px;color:var(--text-faint);">베타</span></div>
-    <div id="pl-ai-coach"></div>
-    <div class="sec-label">이번 달 vs 지난달</div>
-    <div id="pl-month-compare"></div>
+    <div id="pl-ai-coach-section">
+      <div class="sec-label">AI 코칭 <span style="font-size:10px;color:var(--text-faint);">베타</span></div>
+      <div id="pl-ai-coach"></div>
+    </div>
+    <div id="pl-month-compare-section">
+      <div class="sec-label">이번 달 vs 지난달</div>
+      <div id="pl-month-compare"></div>
+    </div>
     <div class="sec-label">심박수·강도 추이</div>
     <div id="pl-hr-trend-chart"></div>
     <div class="sec-label">최고심박수·평균심박수·칼로리 한눈에</div>
@@ -512,8 +549,6 @@ input,button,textarea,select{font-family:inherit;}
     <div class="sec-label">체중 추이</div>
     <div id="pl-weight-trend-chart"></div>
     <div id="pl-stats-chart-area"></div>
-    <div class="sec-label">최근 운동 평균 심박수 비교</div>
-    <div id="pl-trend-rows"></div>
   </section>
 
   <!-- 하단 탭 -->
@@ -543,6 +578,8 @@ input,button,textarea,select{font-family:inherit;}
     <div class="ov-hdr"><div class="ov-title">설정</div><button class="ov-close" onclick="plCloseSettings()" aria-label="닫기">×</button></div>
     <div class="sec-label">프로필</div>
     <div class="form-group"><label class="form-lbl">키 (cm)</label><input class="form-input" type="number" id="s-height" step="0.1" placeholder="예: 170"></div>
+    <div class="form-group"><label class="form-lbl">나이 <span style="font-size:10px;color:var(--text-faint);">선택</span></label><input class="form-input" type="number" id="s-age" placeholder="예: 35"></div>
+    <div class="calc-hint" style="margin-bottom:10px;">입력하면 이론적 최대심박수(220-나이)를 참고로 보여드려요.</div>
     <div class="sec-label">목표</div>
     <div class="form-row">
       <div><label class="form-lbl">일일 목표 (분)</label><input class="form-input" type="number" id="s-daily-min" step="5"></div>
@@ -555,8 +592,14 @@ input,button,textarea,select{font-family:inherit;}
     <button class="btn-primary" onclick="plSaveSettings()">저장</button>
     <div class="sec-label">AI 코칭</div>
     <div class="form-group"><label class="form-lbl">Claude API 키 <span style="font-size:10px;color:var(--text-faint);">선택</span></label><input class="form-input" type="password" id="s-api-key" placeholder="sk-ant-..."></div>
+    <div class="calc-hint" style="margin-bottom:10px;">등록하면 분석 탭에 'AI 코칭' 섹션이 나타나요.</div>
     <div style="font-size:11px;color:var(--text-faint);margin-bottom:10px;line-height:1.6;">브라우저에만 저장돼요. <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--green);">키 발급받기</a></div>
     <button class="btn-secondary" onclick="plSaveApiKey()">API 키 저장</button>
+    <div class="sec-label">화면</div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
+      <label class="form-lbl" for="s-dark-mode" style="margin:0;">다크모드</label>
+      <input type="checkbox" id="s-dark-mode" style="width:20px;height:20px;" onchange="plToggleDarkMode(this.checked)">
+    </div>
     <div class="sec-label">계정</div>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;" id="pl-account-info"></div>
     <button class="btn-secondary" onclick="plSignOut()">로그아웃</button>
@@ -578,6 +621,8 @@ input,button,textarea,select{font-family:inherit;}
     <div class="calc-hint" id="b-bmi-display">키를 설정에 입력하면 BMI가 자동 계산돼요.</div>
     <div class="form-group"><label class="form-lbl">안정시심박수 (선택)</label><input class="form-input" type="number" id="b-resting-hr" placeholder="예: 58"></div>
     <div class="calc-hint">기상 직후 누운 채로 측정하면 가장 정확해요. 꾸준히 낮아지면 심폐체력이 좋아지고 있다는 신호예요.</div>
+    <div class="form-group"><label class="form-lbl">허리둘레 (cm, 선택)</label><input class="form-input" type="number" step="0.1" id="b-waist" placeholder="예: 78" oninput="plUpdateWhtrPreview()"></div>
+    <div class="calc-hint" id="b-whtr-display">키를 설정에 입력하면 허리-신장비(WHtR)가 계산돼요.</div>
     <button class="btn-primary" onclick="plSaveBodyLog()">저장</button>
   </div>
 
@@ -613,7 +658,22 @@ let PL_WORKOUTS = [];
 let PL_BODYLOGS = [];
 let plSelectedType = null;
 let plCurrentPeriod = 'week';
-let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50, heightCm:null };
+let PL_HISTORY_FILTER_TYPE = 'all';
+let PL_HISTORY_FILTER_MONTH_ONLY = false;
+function plSetHistoryTypeFilter(v){ PL_HISTORY_FILTER_TYPE = v; plRenderHistory(); }
+function plSetHistoryMonthOnly(v){ PL_HISTORY_FILTER_MONTH_ONLY = v; plRenderHistory(); }
+function plGetFilteredWorkouts(){
+  const today = new Date();
+  return PL_WORKOUTS.filter(function(w){
+    if(PL_HISTORY_FILTER_TYPE!=='all' && w.type!==PL_HISTORY_FILTER_TYPE) return false;
+    if(PL_HISTORY_FILTER_MONTH_ONLY){
+      const d = plFromISO(w.date);
+      if(d.getFullYear()!==today.getFullYear() || d.getMonth()!==today.getMonth()) return false;
+    }
+    return true;
+  });
+}
+let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50, heightCm:null, age:null };
 
 function plPad(n){ return n<10 ? '0'+n : ''+n; }
 function plToISO(d){ return d.getFullYear()+'-'+plPad(d.getMonth()+1)+'-'+plPad(d.getDate()); }
@@ -982,6 +1042,7 @@ function plResetForm(){
   PL_RPE_TOUCHED = false;
   document.getElementById('pl-rpe-val').textContent = '미입력';
   document.getElementById('f-memo').value = '';
+  document.getElementById('f-warmup').checked = false;
   document.getElementById('pl-form-error').classList.remove('open');
 }
 
@@ -1017,7 +1078,8 @@ function plStartEdit(id){
   if(w.rpe != null){ PL_RPE_TOUCHED = true; plUpdateRpe(); }
   else { PL_RPE_TOUCHED = false; document.getElementById('pl-rpe-val').textContent = '미입력'; }
   document.getElementById('f-memo').value = w.memo || '';
-  if(w.maxHr!=null || w.kcalActive!=null || w.kcalTotal!=null || w.rpe!=null || w.memo){
+  document.getElementById('f-warmup').checked = !!w.hadWarmup;
+  if(w.maxHr!=null || w.kcalActive!=null || w.kcalTotal!=null || w.rpe!=null || w.memo || w.hadWarmup){
     document.getElementById('opt-section').classList.add('open');
     document.getElementById('opt-toggle').innerHTML = '<span>▼</span> 더 입력하기 (칼로리·최고심박수·메모)';
   } else {
@@ -1069,7 +1131,8 @@ async function plSaveWorkout(){
     distance: isNaN(distance) ? null : distance,
     zones: existingZones,
     rpe: PL_RPE_TOUCHED ? parseInt(document.getElementById('f-rpe').value, 10) : null,
-    memo: document.getElementById('f-memo').value.trim()
+    memo: document.getElementById('f-memo').value.trim(),
+    hadWarmup: document.getElementById('f-warmup').checked
   };
 
   const prMessages = [];
@@ -1100,6 +1163,12 @@ async function plSaveWorkout(){
       anomalyNote = '오늘 최고심박수('+Math.round(w.maxHr)+'bpm)가 평소보다 꽤 높게 나왔어요. 컨디션을 살펴보고, 반복되면 전문가와 상담해보세요.';
     }
   }
+  if(!anomalyNote && w.maxHr!=null && PL_SETTINGS.age){
+    const theoMax = 220 - PL_SETTINGS.age;
+    if(w.maxHr > theoMax){
+      anomalyNote = '오늘 최고심박수('+Math.round(w.maxHr)+'bpm)가 나이 기준 이론적 최대치(약 '+theoMax+'bpm)를 넘었어요. 참고용 수치이니 컨디션을 살펴보고 무리되면 강도를 낮춰보세요.';
+    }
+  }
 
   if(existingIndex>-1){
     PL_WORKOUTS[existingIndex] = w;
@@ -1110,13 +1179,29 @@ async function plSaveWorkout(){
   const ok = await plPersist();
   let msg = ok ? (wasEdit?'수정했어요':'저장했어요') : '저장 실패 - 이 화면을 벗어나면 기록이 사라질 수 있어요';
   if(ok && prMessages.length>0){ msg += ' · 🏆 '+prMessages.join(', ')+' 신기록!'; }
-  plToast(msg);
+  if(ok){
+    plToast(msg);
+  } else {
+    plToastWithAction(msg, '재시도', plRetrySaveWorkout, 6000);
+  }
   if(ok && anomalyNote){ setTimeout(function(){ plToast(anomalyNote); }, 2000); }
   plRenderHome();
   plRenderHistory();
   plRenderStats();
   plResetForm();
   plGoTab('history');
+}
+
+async function plRetrySaveWorkout(){
+  const ok = await plPersist();
+  if(ok){
+    plToast('저장했어요');
+    plRenderHome();
+    plRenderHistory();
+    plRenderStats();
+  } else {
+    plToastWithAction('저장 실패 - 이 화면을 벗어나면 기록이 사라질 수 있어요', '재시도', plRetrySaveWorkout, 6000);
+  }
 }
 
 let plToastTimer = null;
@@ -1126,6 +1211,22 @@ function plToast(msg){
   t.classList.add('open');
   clearTimeout(plToastTimer);
   plToastTimer = setTimeout(function(){ t.classList.remove('open'); }, msg.length>20 ? 3200 : 1800);
+}
+
+function plToastWithAction(msg, actionLabel, actionFn, duration){
+  const t = document.getElementById('pl-toast');
+  clearTimeout(plToastTimer);
+  t.innerHTML = '<span>'+msg+'</span> <button type="button" id="pl-toast-action-btn" style="margin-left:10px;background:none;border:none;color:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:0;">'+actionLabel+'</button>';
+  t.classList.add('open');
+  const btn = document.getElementById('pl-toast-action-btn');
+  if(btn){
+    btn.onclick = function(){
+      t.classList.remove('open');
+      clearTimeout(plToastTimer);
+      actionFn();
+    };
+  }
+  plToastTimer = setTimeout(function(){ t.classList.remove('open'); }, duration || 5000);
 }
 
 function plRingSVG(w, size){
@@ -1361,6 +1462,7 @@ function plDayTotalMin(iso){
 
 function plOpenSettings(){
   document.getElementById('s-height').value = PL_SETTINGS.heightCm || '';
+  document.getElementById('s-age').value = PL_SETTINGS.age || '';
   document.getElementById('s-daily-min').value = PL_SETTINGS.dailyGoal;
   document.getElementById('s-monthly-days').value = PL_SETTINGS.monthlyGoalDays;
   document.getElementById('s-weekly-min').value = PL_SETTINGS.weeklyGoalMin;
@@ -1368,8 +1470,22 @@ function plOpenSettings(){
   let savedKey = '';
   try{ savedKey = localStorage.getItem('pl-api-key') || ''; }catch(e){}
   document.getElementById('s-api-key').value = savedKey;
+  let darkOn = false;
+  try{ darkOn = localStorage.getItem('pl-dark-mode') === '1'; }catch(e){}
+  document.getElementById('s-dark-mode').checked = darkOn;
   plRenderDeleteAccountButton();
   document.getElementById('pl-settings-overlay').classList.add('open');
+}
+
+function plToggleDarkMode(on){
+  document.body.classList.toggle('dark', on);
+  try{ localStorage.setItem('pl-dark-mode', on ? '1' : '0'); }catch(e){}
+}
+
+function plApplyDarkModePreference(){
+  let darkOn = false;
+  try{ darkOn = localStorage.getItem('pl-dark-mode') === '1'; }catch(e){}
+  document.body.classList.toggle('dark', darkOn);
 }
 
 function plSaveApiKey(){
@@ -1383,6 +1499,7 @@ function plSaveApiKey(){
 
 async function plSaveSettings(){
   const height = parseFloat(document.getElementById('s-height').value);
+  const age = parseFloat(document.getElementById('s-age').value);
   const daily = parseFloat(document.getElementById('s-daily-min').value);
   const monthDays = parseFloat(document.getElementById('s-monthly-days').value);
   const weekly = parseFloat(document.getElementById('s-weekly-min').value);
@@ -1392,7 +1509,8 @@ async function plSaveSettings(){
     monthlyGoalDays: (!isNaN(monthDays) && monthDays>0) ? monthDays : PL_SETTINGS.monthlyGoalDays,
     weeklyGoalMin: (!isNaN(weekly) && weekly>0) ? weekly : PL_SETTINGS.weeklyGoalMin,
     monthlyGoalKm: (!isNaN(monthKm) && monthKm>0) ? monthKm : PL_SETTINGS.monthlyGoalKm,
-    heightCm: (!isNaN(height) && height>0) ? height : null
+    heightCm: (!isNaN(height) && height>0) ? height : null,
+    age: (!isNaN(age) && age>0) ? age : null
   };
   try{
     await plDb.collection('logs').doc(PL_SYNC_CODE).set({
@@ -1474,34 +1592,52 @@ function plRenderRecoveryWarning(){
   const wrap = document.getElementById('pl-recovery-wrap');
   if(!wrap) return;
   const streak = plComputeStreak();
-  if(streak < 10){ wrap.innerHTML = ''; return; }
 
-  const recent7 = PL_WORKOUTS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).slice(0,7);
-  const rpeList = recent7.map(function(w){ return w.rpe; }).filter(function(v){ return v!=null; });
-  const avgRpe = rpeList.length ? plAvg(rpeList) : null;
+  if(streak >= 10){
+    const recent7 = PL_WORKOUTS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).slice(0,7);
+    const rpeList = recent7.map(function(w){ return w.rpe; }).filter(function(v){ return v!=null; });
+    const avgRpe = rpeList.length ? plAvg(rpeList) : null;
 
-  const cutoffNow = new Date(); cutoffNow.setDate(cutoffNow.getDate()-6);
-  const cutoffPrev = new Date(); cutoffPrev.setDate(cutoffPrev.getDate()-13);
-  const hrNow = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=cutoffNow; }).map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
-  const hrPrev = PL_WORKOUTS.filter(function(w){ const d=plFromISO(w.date); return d>=cutoffPrev && d<cutoffNow; }).map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
-  const hrRising = (hrNow.length>=2 && hrPrev.length>=2) ? (plAvg(hrNow) - plAvg(hrPrev) >= 4) : false;
+    const cutoffNow = new Date(); cutoffNow.setDate(cutoffNow.getDate()-6);
+    const cutoffPrev = new Date(); cutoffPrev.setDate(cutoffPrev.getDate()-13);
+    const hrNow = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=cutoffNow; }).map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
+    const hrPrev = PL_WORKOUTS.filter(function(w){ const d=plFromISO(w.date); return d>=cutoffPrev && d<cutoffNow; }).map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
+    const hrRising = (hrNow.length>=2 && hrPrev.length>=2) ? (plAvg(hrNow) - plAvg(hrPrev) >= 4) : false;
 
-  if((avgRpe!=null && avgRpe>=7) || hrRising){
-    wrap.innerHTML = '<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:12px;font-size:13px;line-height:1.6;color:var(--text);">'+
-      '😮\u200D💨 <b>'+streak+'일째 쉬지 않고 운동하고 있어요.</b><br>'+
-      (avgRpe!=null && avgRpe>=7 ? '최근 체감강도도 높은 편이에요. ' : '')+
-      (hrRising ? '평균 심박수도 살짝 오르는 추세예요. ' : '')+
-      '회복을 위해 하루 정도 가볍게 쉬거나 강도를 낮춰보는 걸 추천해요.'+
-    '</div>';
-  } else {
-    wrap.innerHTML = '';
+    if((avgRpe!=null && avgRpe>=7) || hrRising){
+      wrap.innerHTML = '<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:12px;font-size:13px;line-height:1.6;color:var(--text);">'+
+        '😮\u200D💨 <b>'+streak+'일째 쉬지 않고 운동하고 있어요.</b><br>'+
+        (avgRpe!=null && avgRpe>=7 ? '최근 체감강도도 높은 편이에요. ' : '')+
+        (hrRising ? '평균 심박수도 살짝 오르는 추세예요. ' : '')+
+        '회복을 위해 하루 정도 가볍게 쉬거나 강도를 낮춰보는 걸 추천해요.'+
+      '</div>';
+      return;
+    }
   }
+
+  if(PL_WORKOUTS.length>0){
+    const lastDate = PL_WORKOUTS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); })[0].date;
+    const idleDays = Math.floor((plFromISO(plToday()) - plFromISO(lastDate)) / 86400000);
+    if(idleDays >= 3){
+      wrap.innerHTML = '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:12px;font-size:13px;line-height:1.6;color:var(--text-dim);">'+
+        '🌱 <b>'+idleDays+'일째 쉬고 있어요.</b> 부담 없이 짧게라도 오늘 다시 시작해볼까요?'+
+      '</div>';
+      return;
+    }
+  }
+
+  wrap.innerHTML = '';
 }
 
 function plCalcBmi(weightKg){
   if(!PL_SETTINGS.heightCm || !weightKg) return null;
   const hM = PL_SETTINGS.heightCm / 100;
   return weightKg / (hM*hM);
+}
+
+function plCalcWhtr(waistCm){
+  if(!PL_SETTINGS.heightCm || !waistCm) return null;
+  return waistCm / PL_SETTINGS.heightCm;
 }
 
 function plRenderBodyCard(){
@@ -1556,12 +1692,18 @@ function plRenderBodyCard(){
     restingTxt = ' · 안정시 '+Math.round(latest.restingHr)+'bpm'+rDelta;
   }
 
+  let whtrTxt = '';
+  const whtr = latest.waist!=null ? plCalcWhtr(latest.waist) : null;
+  if(whtr != null){
+    whtrTxt = ' · WHtR '+whtr.toFixed(2)+(whtr>=0.58?' <span class="bmi-pill high">위험참고</span>':whtr>=0.5?' <span class="bmi-pill warn">주의참고</span>':'');
+  }
+
   wrap.innerHTML = '<div class="sec-label">몸무게</div>'+
     '<div class="body-mini" onclick="plOpenBodyLog()">'+
       '<div class="body-mini-icon">\u2696\uFE0F</div>'+
       '<div class="body-mini-info">'+
         '<div class="body-mini-val">'+latest.weight.toFixed(1)+' kg'+deltaTxt+'</div>'+
-        '<div class="body-mini-bmi">'+latest.date+(bmi!=null?' \u00B7 BMI '+bmi.toFixed(1):'')+bmiPill+restingTxt+'</div>'+
+        '<div class="body-mini-bmi">'+latest.date+(bmi!=null?' \u00B7 BMI '+bmi.toFixed(1):'')+bmiPill+restingTxt+whtrTxt+'</div>'+
       '</div>'+
       '<span class="btn-sm">+ 기록</span>'+
     '</div>';
@@ -1571,7 +1713,9 @@ function plOpenBodyLog(){
   document.getElementById('b-date').value = plToday();
   document.getElementById('b-weight').value = '';
   document.getElementById('b-resting-hr').value = '';
+  document.getElementById('b-waist').value = '';
   plUpdateBmiPreview();
+  plUpdateWhtrPreview();
   document.getElementById('pl-body-overlay').classList.add('open');
 }
 
@@ -1586,17 +1730,26 @@ function plUpdateBmiPreview(){
   disp.textContent = bmi ? 'BMI ' + bmi.toFixed(1) : '키를 설정에 입력하면 BMI가 자동 계산돼요.';
 }
 
+function plUpdateWhtrPreview(){
+  const disp = document.getElementById('b-whtr-display');
+  const waist = parseFloat(document.getElementById('b-waist').value);
+  const whtr = plCalcWhtr(waist);
+  disp.textContent = whtr ? 'WHtR ' + whtr.toFixed(2) + (whtr>=0.58?' · 복부비만 위험 참고치 이상':whtr>=0.5?' · 주의 참고치':' · 정상 범위') : '키를 설정에 입력하면 허리-신장비(WHtR)가 계산돼요.';
+}
+
 async function plSaveBodyLog(){
   const date = document.getElementById('b-date').value;
   const weight = parseFloat(document.getElementById('b-weight').value);
   const restingHrRaw = parseFloat(document.getElementById('b-resting-hr').value);
   const restingHr = isNaN(restingHrRaw) ? null : restingHrRaw;
+  const waistRaw = parseFloat(document.getElementById('b-waist').value);
+  const waist = isNaN(waistRaw) ? null : waistRaw;
   if(!date || isNaN(weight) || weight<=0){
     plToast('날짜와 몸무게를 입력해주세요');
     return;
   }
   const existingIndex = PL_BODYLOGS.findIndex(function(b){ return b.date===date; });
-  const entry = { id: existingIndex>-1 ? PL_BODYLOGS[existingIndex].id : plUid(), date: date, weight: weight, restingHr: restingHr };
+  const entry = { id: existingIndex>-1 ? PL_BODYLOGS[existingIndex].id : plUid(), date: date, weight: weight, restingHr: restingHr, waist: waist };
   if(existingIndex>-1){ PL_BODYLOGS[existingIndex] = entry; } else { PL_BODYLOGS.push(entry); }
   try{
     await plDb.collection('logs').doc(PL_SYNC_CODE).set({
@@ -1606,11 +1759,26 @@ async function plSaveBodyLog(){
     plToast('몸무게를 기록했어요');
   }catch(e){
     console.error('body log save failed', e);
-    plToast('저장에 실패했어요');
+    plToastWithAction('저장에 실패했어요', '재시도', plRetrySaveBodyLog, 6000);
   }
   plCloseBodyLog();
   plRenderHome();
   plRenderStats();
+}
+
+async function plRetrySaveBodyLog(){
+  try{
+    await plDb.collection('logs').doc(PL_SYNC_CODE).set({
+      bodyLogsJson: JSON.stringify(PL_BODYLOGS),
+      workoutsJson: JSON.stringify(PL_WORKOUTS)
+    }, { merge:true });
+    plToast('몸무게를 기록했어요');
+    plRenderHome();
+    plRenderStats();
+  }catch(e){
+    console.error('retry body log save failed', e);
+    plToastWithAction('저장에 실패했어요', '재시도', plRetrySaveBodyLog, 6000);
+  }
 }
 
 function plRenderHistory(){
@@ -1621,23 +1789,30 @@ function plRenderHistory(){
       '<div class="empty-desc">운동을 마치면 바로 기록해보세요.</div></div>';
     return;
   }
+  const filtered = plGetFilteredWorkouts();
+  if(filtered.length===0){
+    wrap.innerHTML = '<div class="empty"><div class="empty-emoji">\uD83D\uDD0D</div>'+
+      '<div class="empty-ttl">조건에 맞는 기록이 없어요</div>'+
+      '<div class="empty-desc">필터를 바꿔보세요.</div></div>';
+    return;
+  }
   const wdLabels = ['일','월','화','수','목','금','토'];
 
-  // 대표 운동종류 파악 (반복 노이즈 제거용)
+  // 대표 운동종류 파악 (반복 노이즈 제거용, 필터된 목록 기준)
   const typeCount = {};
-  PL_WORKOUTS.forEach(function(w){ typeCount[w.type] = (typeCount[w.type]||0)+1; });
+  filtered.forEach(function(w){ typeCount[w.type] = (typeCount[w.type]||0)+1; });
   let mainType = null, maxCnt = 0;
   Object.keys(typeCount).forEach(function(t){
     if(typeCount[t] > maxCnt){ maxCnt = typeCount[t]; mainType = t; }
   });
 
-  // 본인 심박수 범위 (강도 상대평가용)
+  // 본인 심박수 범위 (강도 상대평가용, 필터와 무관하게 전체 기록 기준 유지)
   const allHr = PL_WORKOUTS.map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
   const hrMin = allHr.length ? Math.min.apply(null, allHr) : 0;
   const hrMax = allHr.length ? Math.max.apply(null, allHr) : 0;
   const hrRange = (hrMax - hrMin) || 1;
 
-  // 시간순(오름차순)으로 직전 회차 심박수 매핑
+  // 시간순(오름차순)으로 직전 회차 심박수 매핑 (전체 기록 기준 - 필터와 무관하게 실제 직전 운동과 비교)
   const asc = PL_WORKOUTS.slice().sort(function(a,b){
     return a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
   });
@@ -1648,10 +1823,10 @@ function plRenderHistory(){
     if(w.avgHr != null) lastHr = w.avgHr;
   });
 
-  // 월별 그룹핑
+  // 월별 그룹핑 (필터된 목록 기준)
   const months = {};
   const monthOrder = [];
-  PL_WORKOUTS.forEach(function(w){
+  filtered.forEach(function(w){
     const d = plFromISO(w.date);
     const key = d.getFullYear()+'-'+String(d.getMonth()).padStart(2,'0');
     if(!months[key]){ months[key] = { y:d.getFullYear(), m:d.getMonth(), items:[] }; monthOrder.push(key); }
@@ -1766,13 +1941,16 @@ function plOpenDetail(id){
   const w = PL_WORKOUTS.find(function(x){ return x.id===id; });
   if(!w) return;
   const ring = plRingSVG(w, 180);
+  const theoMaxHr = PL_SETTINGS.age ? (220 - PL_SETTINGS.age) : null;
   document.getElementById('pl-detail-content').innerHTML =
     '<div class="detail-ring-wrap">'+ring+
     '<div class="detail-ring-center"><div class="detail-ring-num">'+(w.avgHr?Math.round(w.avgHr):'--')+
     '<span style="font-size:12px;color:var(--text-dim);"> bpm</span></div><div style="font-size:12px;color:var(--text-dim);margin-top:2px;">'+w.duration.toFixed(1)+'분</div></div></div>'+
-    '<div style="text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:14px;">'+w.date+' · '+w.type+(w.startTime&&w.endTime?' · '+w.startTime.slice(0,5)+' ~ '+w.endTime.slice(0,5):'')+(plIntensityLabel(w)?' · '+plIntensityLabel(w):'')+'</div>'+
+    '<div style="text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:14px;">'+w.date+' · '+w.type+(w.startTime&&w.endTime?' · '+w.startTime.slice(0,5)+' ~ '+w.endTime.slice(0,5):'')+(plIntensityLabel(w)?' · '+plIntensityLabel(w):'')+(w.hadWarmup?' · 🧘 워밍업/쿨다운':'')+'</div>'+
     '<div class="detail-grid">'+
-    '<div class="detail-cell"><div class="detail-cell-lbl">최고 심박수</div><div class="detail-cell-val">'+(w.maxHr?Math.round(w.maxHr):'-')+'</div></div>'+
+    '<div class="detail-cell"><div class="detail-cell-lbl">최고 심박수</div><div class="detail-cell-val">'+(w.maxHr?Math.round(w.maxHr):'-')+'</div>'+
+      (w.maxHr && theoMaxHr ? '<div style="font-size:10px;color:var(--text-faint);margin-top:2px;">이론적 최대('+theoMaxHr+') 대비 '+Math.round(w.maxHr/theoMaxHr*100)+'%</div>' : '')+
+    '</div>'+
     '<div class="detail-cell"><div class="detail-cell-lbl">체감 강도</div><div class="detail-cell-val">'+(w.rpe!=null?w.rpe+'/10':'-')+'</div></div>'+
     '<div class="detail-cell"><div class="detail-cell-lbl">활동 칼로리</div><div class="detail-cell-val">'+(w.kcalActive?Math.round(w.kcalActive):'-')+'</div></div>'+
     '<div class="detail-cell"><div class="detail-cell-lbl">총 칼로리</div><div class="detail-cell-val">'+(w.kcalTotal?Math.round(w.kcalTotal):'-')+'</div></div>'+
@@ -1801,14 +1979,46 @@ function plConfirmDelete(id){
     '</div>';
 }
 
+let PL_LAST_DELETED_WORKOUT = null;
 async function plDeleteWorkout(id){
+  const removed = PL_WORKOUTS.find(function(w){ return w.id===id; });
+  if(!removed) return;
+  PL_LAST_DELETED_WORKOUT = removed;
   PL_WORKOUTS = PL_WORKOUTS.filter(function(w){ return w.id!==id; });
   const ok = await plPersist();
   plCloseDetail();
   plRenderHome();
   plRenderHistory();
   plRenderStats();
-  plToast(ok ? '삭제했어요' : '삭제 실패 - 저장소에 연결되지 않았어요');
+  if(ok){
+    plToastWithAction('삭제했어요', '되돌리기', plUndoDeleteWorkout, 5000);
+  } else {
+    plToastWithAction('삭제 실패 - 저장소에 연결되지 않았어요', '재시도', plRetryDeleteWorkout, 6000);
+  }
+}
+
+async function plRetryDeleteWorkout(){
+  const ok = await plPersist();
+  plRenderHome();
+  plRenderHistory();
+  plRenderStats();
+  if(ok){
+    plToastWithAction('삭제했어요', '되돌리기', plUndoDeleteWorkout, 5000);
+  } else {
+    plToastWithAction('삭제 실패 - 저장소에 연결되지 않았어요', '재시도', plRetryDeleteWorkout, 6000);
+  }
+}
+
+async function plUndoDeleteWorkout(){
+  if(!PL_LAST_DELETED_WORKOUT) return;
+  const restored = PL_LAST_DELETED_WORKOUT;
+  PL_LAST_DELETED_WORKOUT = null;
+  PL_WORKOUTS.push(restored);
+  plRenderHome();
+  plRenderHistory();
+  plRenderStats();
+  const ok = await plPersist();
+  plToast(ok ? '복구했어요' : '복구 실패 - 다시 삭제 후 되돌리기를 시도해주세요');
 }
 
 function plCloseDetail(){
@@ -1842,11 +2052,10 @@ function plRenderStats(){
   const avgHr = avgHrList.length ? Math.round(plAvg(avgHrList)) : 0;
 
   document.getElementById('pl-summary-grid').innerHTML =
-    '<div class="sum-cell"><div class="trend-card-lbl">⏱ 총 시간</div><div class="detail-cell-val">'+totalDur.toFixed(0)+'<span style="font-size:13px;"> 분</span></div></div>'+
+    '<div class="sum-cell"><div class="trend-card-lbl">🚴 운동 · 시간</div><div class="detail-cell-val">'+filtered.length+'<span style="font-size:13px;"> 회</span></div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">'+totalDur.toFixed(0)+'분</div></div>'+
     '<div class="sum-cell"><div class="trend-card-lbl">📍 총 거리</div><div class="detail-cell-val">'+totalDist.toFixed(1)+'<span style="font-size:13px;"> km</span></div></div>'+
     '<div class="sum-cell"><div class="trend-card-lbl">🔥 총 칼로리</div><div class="detail-cell-val">'+totalKcal.toFixed(0)+'<span style="font-size:13px;"> kcal</span></div></div>'+
-    '<div class="sum-cell"><div class="trend-card-lbl">❤️ 평균 심박수</div><div class="detail-cell-val">'+(avgHr||'-')+'<span style="font-size:13px;"> bpm</span></div></div>'+
-    '<div class="sum-cell"><div class="trend-card-lbl">🚴 운동 횟수</div><div class="detail-cell-val">'+filtered.length+'<span style="font-size:13px;"> 회</span></div></div>';
+    '<div class="sum-cell"><div class="trend-card-lbl">❤️ 평균 심박수</div><div class="detail-cell-val">'+(avgHr||'-')+'<span style="font-size:13px;"> bpm</span></div></div>';
 
   const challengeEl = document.getElementById('pl-monthly-challenge');
   if(plCurrentPeriod==='month'){
@@ -1876,7 +2085,6 @@ function plRenderStats(){
   plRenderHrKcalComboChart();
   plRenderOverloadChart();
   plRenderWeightTrendChart();
-  plRenderTrendRows();
 }
 
 function plRenderWeekBarsHTML(){
@@ -1936,14 +2144,15 @@ function plRenderHeatmapHTML(){
 
 function plRenderAiCoachSection(){
   const wrap = document.getElementById('pl-ai-coach');
+  const section = document.getElementById('pl-ai-coach-section');
   if(!wrap) return;
   let key = '';
   try{ key = localStorage.getItem('pl-api-key') || ''; }catch(e){}
   if(!key){
-    wrap.innerHTML = '<div class="empty" style="padding:16px 10px;">설정에서 나만의 API 키를 등록하면, AI가 직접 코칭 문장을 만들어드려요.'+
-      '<div style="margin-top:10px;"><button type="button" class="btn-secondary" onclick="plOpenSettings()">설정 열기</button></div></div>';
+    if(section) section.style.display = 'none';
     return;
   }
+  if(section) section.style.display = '';
   wrap.innerHTML = '<button type="button" class="btn-primary" style="margin-bottom:8px;" onclick="plGenerateAiCoaching()">✨ AI 코칭 받기</button><div id="pl-ai-coach-result"></div>';
 }
 
@@ -2069,6 +2278,7 @@ function plRenderCoachFeedback(){
 
 function plRenderMonthCompare(){
   const wrap = document.getElementById('pl-month-compare');
+  const section = document.getElementById('pl-month-compare-section');
   const today = new Date();
   const thisYm = { y: today.getFullYear(), m: today.getMonth() };
   const lastMonthDate = new Date(today.getFullYear(), today.getMonth()-1, 1);
@@ -2093,9 +2303,10 @@ function plRenderMonthCompare(){
   const prev = statsFor(lastYm);
 
   if(cur.count===0 || prev.count===0){
-    wrap.innerHTML = '<div class="empty" style="padding:16px 10px;">두 달치 기록이 쌓이면 비교 분석이 나타나요.</div>';
+    if(section) section.style.display = 'none';
     return;
   }
+  if(section) section.style.display = '';
 
   const lines = [];
   if(cur.eff!=null && prev.eff!=null){
@@ -2342,28 +2553,6 @@ function plRenderOverloadChart(){
   wrap.innerHTML = '<div class="hero" style="display:block;padding-bottom:14px;">'+svg+legend+'</div>';
 }
 
-function plRenderTrendRows(){
-  const wrap = document.getElementById('pl-trend-rows');
-  const recent = PL_WORKOUTS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).slice(0,6);
-  if(recent.length===0){
-    wrap.innerHTML = '<div class="empty" style="padding:24px 10px;">아직 데이터가 없어요.</div>';
-    return;
-  }
-  const maxHr = Math.max.apply(null, recent.map(function(w){ return w.avgHr||0; }).concat([1]));
-  wrap.innerHTML = recent.map(function(w){
-    let segs;
-    if(w.avgHr){
-      const pct = Math.max(6, (w.avgHr/maxHr*100));
-      segs = '<span style="width:'+pct+'%;background:var(--green)"></span>';
-    } else {
-      segs = '<span style="width:100%;background:var(--surface-2)"></span>';
-    }
-    return '<div class="trow"><div class="trow-top"><span>'+w.date+'</span><span>'+(w.avgHr?Math.round(w.avgHr)+' bpm · ':'')+w.duration.toFixed(1)+'분</span></div>'+
-      '<div class="tbar">'+segs+'</div></div>';
-  }).join('');
-}
-
-
 function plToggleOptional(){
   var sec = document.getElementById('opt-section');
   var tog = document.getElementById('opt-toggle');
@@ -2377,6 +2566,7 @@ function plToggleOptional(){
 }
 
 function plInit(){
+  plApplyDarkModePreference();
   plBuildTypeChips();
   document.getElementById('f-date').value = plToday();
 
