@@ -420,6 +420,7 @@ input,button,textarea,select{font-family:inherit;}
       <div class="week-strip" id="pl-weekstrip"></div>
     </div>
     <div id="pl-goal-wrap"></div>
+    <div id="pl-recovery-wrap"></div>
     <div class="sec-label">트렌드</div>
     <div class="trend-grid" id="pl-cardrow"></div>
     <div id="pl-body-wrap"></div>
@@ -479,6 +480,7 @@ input,button,textarea,select{font-family:inherit;}
     <div class="form-error" id="pl-form-error">운동 종류, 날짜, 시작/종료 시간을 입력해주세요.</div>
     <button class="btn-primary" id="pl-save-btn" onclick="plSaveWorkout()">저장하기</button>
     <button type="button" class="btn-secondary" id="pl-cancel-edit-btn" style="display:none;" onclick="plCancelEdit()">수정 취소</button>
+    <div style="font-size:11px;color:var(--text-faint);text-align:center;margin-top:14px;line-height:1.5;">⚠️ 운동 중 가슴통증·어지럼증·호흡곤란이 있으면 즉시 멈추고 전문가와 상담하세요.</div>
   </section>
 
   <!-- 기록장 탭 -->
@@ -503,6 +505,10 @@ input,button,textarea,select{font-family:inherit;}
     <div id="pl-month-compare"></div>
     <div class="sec-label">심박수·강도 추이</div>
     <div id="pl-hr-trend-chart"></div>
+    <div class="sec-label">최고심박수·평균심박수·칼로리 한눈에</div>
+    <div id="pl-hr-kcal-combo-chart"></div>
+    <div class="sec-label">최근 8주 진행 추이 (점진적 과부하)</div>
+    <div id="pl-overload-chart"></div>
     <div class="sec-label">체중 추이</div>
     <div id="pl-weight-trend-chart"></div>
     <div id="pl-stats-chart-area"></div>
@@ -570,6 +576,8 @@ input,button,textarea,select{font-family:inherit;}
     <div class="form-group"><label class="form-lbl">날짜</label><input class="form-input" type="date" id="b-date"></div>
     <div class="form-group"><label class="form-lbl">몸무게 (kg)</label><input class="form-input" type="number" step="0.1" id="b-weight" placeholder="예: 68.5" oninput="plUpdateBmiPreview()"></div>
     <div class="calc-hint" id="b-bmi-display">키를 설정에 입력하면 BMI가 자동 계산돼요.</div>
+    <div class="form-group"><label class="form-lbl">안정시심박수 (선택)</label><input class="form-input" type="number" id="b-resting-hr" placeholder="예: 58"></div>
+    <div class="calc-hint">기상 직후 누운 채로 측정하면 가장 정확해요. 꾸준히 낮아지면 심폐체력이 좋아지고 있다는 신호예요.</div>
     <button class="btn-primary" onclick="plSaveBodyLog()">저장</button>
   </div>
 
@@ -1081,6 +1089,18 @@ async function plSaveWorkout(){
     }
   }
 
+  let anomalyNote = null;
+  const sameTypePrev = PL_WORKOUTS.filter(function(o){ return o.type===plSelectedType && o.id!==w.id; });
+  const maxHrHist = sameTypePrev.map(function(o){ return o.maxHr; }).filter(function(v){ return v!=null; });
+  if(w.maxHr!=null && maxHrHist.length>=3){
+    const mean = plAvg(maxHrHist);
+    const variance = maxHrHist.reduce(function(a,v){ return a+Math.pow(v-mean,2); },0)/maxHrHist.length;
+    const sd = Math.sqrt(variance);
+    if(w.maxHr > mean + Math.max(2*sd, 10)){
+      anomalyNote = '오늘 최고심박수('+Math.round(w.maxHr)+'bpm)가 평소보다 꽤 높게 나왔어요. 컨디션을 살펴보고, 반복되면 전문가와 상담해보세요.';
+    }
+  }
+
   if(existingIndex>-1){
     PL_WORKOUTS[existingIndex] = w;
   } else {
@@ -1091,6 +1111,7 @@ async function plSaveWorkout(){
   let msg = ok ? (wasEdit?'수정했어요':'저장했어요') : '저장 실패 - 이 화면을 벗어나면 기록이 사라질 수 있어요';
   if(ok && prMessages.length>0){ msg += ' · 🏆 '+prMessages.join(', ')+' 신기록!'; }
   plToast(msg);
+  if(ok && anomalyNote){ setTimeout(function(){ plToast(anomalyNote); }, 2000); }
   plRenderHome();
   plRenderHistory();
   plRenderStats();
@@ -1443,9 +1464,38 @@ async function plShareWeekImage(){
 function plRenderHome(){
   plRenderWeekStrip();
   plRenderGoal();
+  plRenderRecoveryWarning();
   plRenderHero();
   plRenderCards();
   plRenderBodyCard();
+}
+
+function plRenderRecoveryWarning(){
+  const wrap = document.getElementById('pl-recovery-wrap');
+  if(!wrap) return;
+  const streak = plComputeStreak();
+  if(streak < 10){ wrap.innerHTML = ''; return; }
+
+  const recent7 = PL_WORKOUTS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).slice(0,7);
+  const rpeList = recent7.map(function(w){ return w.rpe; }).filter(function(v){ return v!=null; });
+  const avgRpe = rpeList.length ? plAvg(rpeList) : null;
+
+  const cutoffNow = new Date(); cutoffNow.setDate(cutoffNow.getDate()-6);
+  const cutoffPrev = new Date(); cutoffPrev.setDate(cutoffPrev.getDate()-13);
+  const hrNow = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=cutoffNow; }).map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
+  const hrPrev = PL_WORKOUTS.filter(function(w){ const d=plFromISO(w.date); return d>=cutoffPrev && d<cutoffNow; }).map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
+  const hrRising = (hrNow.length>=2 && hrPrev.length>=2) ? (plAvg(hrNow) - plAvg(hrPrev) >= 4) : false;
+
+  if((avgRpe!=null && avgRpe>=7) || hrRising){
+    wrap.innerHTML = '<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:12px;font-size:13px;line-height:1.6;color:var(--text);">'+
+      '😮\u200D💨 <b>'+streak+'일째 쉬지 않고 운동하고 있어요.</b><br>'+
+      (avgRpe!=null && avgRpe>=7 ? '최근 체감강도도 높은 편이에요. ' : '')+
+      (hrRising ? '평균 심박수도 살짝 오르는 추세예요. ' : '')+
+      '회복을 위해 하루 정도 가볍게 쉬거나 강도를 낮춰보는 걸 추천해요.'+
+    '</div>';
+  } else {
+    wrap.innerHTML = '';
+  }
 }
 
 function plCalcBmi(weightKg){
@@ -1492,12 +1542,26 @@ function plRenderBodyCard(){
     }
   }
 
+  let restingTxt = '';
+  if(latest.restingHr!=null){
+    const prevWithRhr = sorted.slice(1).find(function(b){ return b.restingHr!=null; });
+    let rDelta = '';
+    if(prevWithRhr){
+      const diff = latest.restingHr - prevWithRhr.restingHr;
+      if(Math.abs(diff)>=1){
+        const cls = diff < 0 ? 'down' : 'up';
+        rDelta = ' <span class="h-row-delta '+cls+'">'+(diff<0?'\u25BC':'\u25B2')+Math.abs(diff).toFixed(0)+'</span>';
+      }
+    }
+    restingTxt = ' · 안정시 '+Math.round(latest.restingHr)+'bpm'+rDelta;
+  }
+
   wrap.innerHTML = '<div class="sec-label">몸무게</div>'+
     '<div class="body-mini" onclick="plOpenBodyLog()">'+
       '<div class="body-mini-icon">\u2696\uFE0F</div>'+
       '<div class="body-mini-info">'+
         '<div class="body-mini-val">'+latest.weight.toFixed(1)+' kg'+deltaTxt+'</div>'+
-        '<div class="body-mini-bmi">'+latest.date+(bmi!=null?' \u00B7 BMI '+bmi.toFixed(1):'')+bmiPill+'</div>'+
+        '<div class="body-mini-bmi">'+latest.date+(bmi!=null?' \u00B7 BMI '+bmi.toFixed(1):'')+bmiPill+restingTxt+'</div>'+
       '</div>'+
       '<span class="btn-sm">+ 기록</span>'+
     '</div>';
@@ -1506,6 +1570,7 @@ function plRenderBodyCard(){
 function plOpenBodyLog(){
   document.getElementById('b-date').value = plToday();
   document.getElementById('b-weight').value = '';
+  document.getElementById('b-resting-hr').value = '';
   plUpdateBmiPreview();
   document.getElementById('pl-body-overlay').classList.add('open');
 }
@@ -1524,12 +1589,14 @@ function plUpdateBmiPreview(){
 async function plSaveBodyLog(){
   const date = document.getElementById('b-date').value;
   const weight = parseFloat(document.getElementById('b-weight').value);
+  const restingHrRaw = parseFloat(document.getElementById('b-resting-hr').value);
+  const restingHr = isNaN(restingHrRaw) ? null : restingHrRaw;
   if(!date || isNaN(weight) || weight<=0){
     plToast('날짜와 몸무게를 입력해주세요');
     return;
   }
   const existingIndex = PL_BODYLOGS.findIndex(function(b){ return b.date===date; });
-  const entry = { id: existingIndex>-1 ? PL_BODYLOGS[existingIndex].id : plUid(), date: date, weight: weight };
+  const entry = { id: existingIndex>-1 ? PL_BODYLOGS[existingIndex].id : plUid(), date: date, weight: weight, restingHr: restingHr };
   if(existingIndex>-1){ PL_BODYLOGS[existingIndex] = entry; } else { PL_BODYLOGS.push(entry); }
   try{
     await plDb.collection('logs').doc(PL_SYNC_CODE).set({
@@ -1806,6 +1873,8 @@ function plRenderStats(){
   plRenderAiCoachSection();
   plRenderMonthCompare();
   plRenderHrTrendChart();
+  plRenderHrKcalComboChart();
+  plRenderOverloadChart();
   plRenderWeightTrendChart();
   plRenderTrendRows();
 }
@@ -1953,6 +2022,13 @@ function plRenderCoachFeedback(){
   const rpeList = recent.map(function(w){ return w.rpe; }).filter(function(v){ return v!=null; });
   const avgRpe = rpeList.length ? plAvg(rpeList) : null;
 
+  function hrPerRpeOf(list){
+    const vals = list.filter(function(w){ return w.avgHr!=null && w.rpe!=null; }).map(function(w){ return w.avgHr/w.rpe; });
+    return vals.length ? plAvg(vals) : null;
+  }
+  const hrRpeFirst = hrPerRpeOf(recent.slice(0, half));
+  const hrRpeSecond = hrPerRpeOf(recent.slice(half));
+
   const daysInWindow = 14;
   const uniqueDays = {};
   recent.forEach(function(w){ uniqueDays[w.date] = true; });
@@ -1970,6 +2046,10 @@ function plRenderCoachFeedback(){
   } else if(effFirst!=null && effSecond!=null && effSecond < effFirst*0.97){
     icon = '🔋';
     msg = '최근 심박 효율이 살짝 떨어졌어요. 컨디션 저하나 피로가 누적됐을 수 있으니, 수면과 휴식을 챙겨보는 게 좋겠어요.';
+  } else if(hrRpeFirst!=null && hrRpeSecond!=null && hrRpeSecond > hrRpeFirst*1.08){
+    icon = '💧';
+    const pct = ((hrRpeSecond-hrRpeFirst)/hrRpeFirst*100).toFixed(0);
+    msg = '체감강도는 비슷한데 그에 비해 심박수가 최근 '+pct+'% 더 높게 나오고 있어요. 피로 누적이나 수분 부족 신호일 수 있어요. 수분 섭취와 휴식을 챙겨보세요.';
   } else if(activeDayRatio < 0.3){
     icon = '🌱';
     msg = '최근 2주간 운동 빈도가 낮아졌어요. 부담 없이 짧게라도 다시 리듬을 만들어보는 걸 추천해요.';
@@ -1982,7 +2062,7 @@ function plRenderCoachFeedback(){
 
   wrap.innerHTML = '<div class="hero" style="display:block;">'+
     '<div class="coach-msg">'+icon+' '+msg+'</div>'+
-    '<div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:12px;">이 피드백은 입력하신 기록의 패턴을 기반으로 자동 계산된 것이며, 의료적 진단이나 전문 트레이너의 조언을 대신하지 않아요. 통증이나 건강 이상이 있다면 전문가와 상담하세요.</div>'+
+    '<div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:12px;">참고용 규칙 기반 피드백이며 의료 진단이 아니에요. 통증·이상 시 전문가와 상담하세요.</div>'+
   '</div>';
 }
 
@@ -2055,6 +2135,22 @@ function plRenderWeightTrendChart(){
   const dots = sorted.map(function(b,i){
     return '<circle cx="'+xAt(i)+'" cy="'+yAt(b.weight)+'" r="4" fill="var(--blue)" stroke="var(--surface)" stroke-width="1.5"/>';
   }).join('');
+
+  let rhrSvg = '';
+  const rhrPoints = sorted.map(function(b,i){ return { i:i, v:b.restingHr }; }).filter(function(p){ return p.v!=null; });
+  if(rhrPoints.length>=2){
+    const rhrVals = rhrPoints.map(function(p){ return p.v; });
+    const rMin = Math.min.apply(null, rhrVals), rMax = Math.max.apply(null, rhrVals);
+    function yAt2(frac){ return H-padB-frac*(H-padT-padB); }
+    const rPts = rhrPoints.map(function(p){ return xAt(p.i)+','+yAt2(plNormalize(p.v, rMin, rMax)); }).join(' ');
+    const rDots = rhrPoints.map(function(p){
+      return '<circle cx="'+xAt(p.i)+'" cy="'+yAt2(plNormalize(p.v, rMin, rMax))+'" r="3" fill="var(--green)" stroke="var(--surface)" stroke-width="1.5"/>';
+    }).join('');
+    const rLast = rhrPoints[rhrPoints.length-1];
+    rhrSvg = '<polyline points="'+rPts+'" fill="none" stroke="var(--green)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4,3"/>'+rDots+
+      '<text x="'+xAt(rLast.i)+'" y="'+(yAt2(plNormalize(rLast.v, rMin, rMax))-10)+'" font-size="11" fill="var(--green)" font-family="JetBrains Mono, monospace" text-anchor="end">'+Math.round(rLast.v)+'</text>';
+  }
+
   const svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:150px;">'+
     '<defs><linearGradient id="plWtGrad" x1="0" y1="0" x2="0" y2="1">'+
     '<stop offset="0%" stop-color="var(--blue)" stop-opacity="0.28"/>'+
@@ -2065,10 +2161,11 @@ function plRenderWeightTrendChart(){
     dots+
     '<text x="'+xAt(0)+'" y="'+(yAt(sorted[0].weight)-10)+'" font-size="11" fill="var(--text-dim)" font-family="JetBrains Mono, monospace">'+sorted[0].weight.toFixed(1)+'</text>'+
     '<text x="'+xAt(sorted.length-1)+'" y="'+(yAt(sorted[sorted.length-1].weight)-10)+'" font-size="11" fill="var(--text-dim)" font-family="JetBrains Mono, monospace" text-anchor="end">'+sorted[sorted.length-1].weight.toFixed(1)+'</text>'+
+    rhrSvg+
     '</svg>';
   wrap.innerHTML = '<div class="hero" style="display:block;">'+svg+
     '<div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:2px;">'+
-    '<span>'+sorted[0].date+'</span><span>단위: kg</span><span>'+sorted[sorted.length-1].date+'</span></div></div>';
+    '<span>'+sorted[0].date+'</span><span>'+(rhrPoints.length>=2?'● 파랑 몸무게(kg) · ● 초록 안정시심박수(bpm)':'단위: kg')+'</span><span>'+sorted[sorted.length-1].date+'</span></div></div>';
 }
 
 function plRenderHrTrendChart(){
@@ -2111,6 +2208,138 @@ function plRenderHrTrendChart(){
   wrap.innerHTML = '<div class="hero" style="display:block;padding-bottom:14px;">'+svg+
     '<div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:2px;">'+
     '<span>'+withHr[0].date+'</span><span>● 점 크기 = 체감강도(RPE)</span><span>'+withHr[withHr.length-1].date+'</span></div></div>';
+}
+
+function plNormalize(v, min, max){
+  if(max<=min) return 0.5;
+  return Math.min(1, Math.max(0, (v-min)/(max-min)));
+}
+
+function plRenderHrKcalComboChart(){
+  const wrap = document.getElementById('pl-hr-kcal-combo-chart');
+  if(!wrap) return;
+  const recent = PL_WORKOUTS.slice().sort(function(a,b){ return a.date.localeCompare(b.date) || a.id.localeCompare(b.id); }).slice(-7);
+  const data = recent.filter(function(w){ return w.avgHr!=null && w.maxHr!=null && w.kcalActive!=null; });
+  if(data.length<2){
+    wrap.innerHTML = '<div class="empty" style="padding:20px 10px;">평균심박수·최고심박수·활동칼로리를 함께 입력한 기록이 2개 이상 쌓이면 추이가 보여요.</div>';
+    return;
+  }
+  const W=320,H=150,padL=8,padR=8,padT=18,padB=16;
+  const stepX = data.length>1 ? (W-padL-padR)/(data.length-1) : 0;
+  function xAt(i){ return padL+i*stepX; }
+  function yAt(frac){ return H-padB-frac*(H-padT-padB); }
+
+  const series = [
+    { key:'avgHr', label:'평균심박수', unit:'bpm', color:'var(--green)', fmt:function(v){ return Math.round(v); } },
+    { key:'maxHr', label:'최고심박수', unit:'bpm', color:'var(--red)', fmt:function(v){ return Math.round(v); } },
+    { key:'kcalActive', label:'활동칼로리', unit:'kcal', color:'var(--amber)', fmt:function(v){ return Math.round(v); } }
+  ];
+
+  const gridLines = [0.25,0.5,0.75].map(function(f){
+    const y = padT+(H-padT-padB)*f;
+    return '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,4"/>';
+  }).join('');
+
+  let linesSvg = '';
+  const endLabels = [];
+  series.forEach(function(s){
+    const vals = data.map(function(w){ return w[s.key]; });
+    const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    const pts = data.map(function(w,i){ return xAt(i)+','+yAt(plNormalize(w[s.key], min, max)); }).join(' ');
+    const dots = data.map(function(w,i){
+      return '<circle cx="'+xAt(i)+'" cy="'+yAt(plNormalize(w[s.key], min, max))+'" r="3" fill="'+s.color+'" stroke="var(--surface)" stroke-width="1.5"/>';
+    }).join('');
+    linesSvg += '<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>'+dots;
+    const lastVal = data[data.length-1][s.key];
+    endLabels.push({ y: yAt(plNormalize(lastVal, min, max)), color: s.color, text: s.fmt(lastVal) });
+  });
+  // 라벨끼리 겹치지 않도록 y값이 가까운 순서대로 최소 간격 확보
+  endLabels.sort(function(a,b){ return a.y-b.y; });
+  const minGap = 11;
+  for(let i=1;i<endLabels.length;i++){
+    if(endLabels[i].y - endLabels[i-1].y < minGap){ endLabels[i].y = endLabels[i-1].y + minGap; }
+  }
+  const endLabelsSvg = endLabels.map(function(l){
+    return '<text x="'+(W-padR+4)+'" y="'+(l.y+3)+'" font-size="10" fill="'+l.color+'" font-family="JetBrains Mono, monospace" text-anchor="start">'+l.text+'</text>';
+  }).join('');
+
+  const svg = '<svg viewBox="0 0 '+(W+34)+' '+H+'" style="width:100%;height:160px;overflow:visible;">'+
+    gridLines+linesSvg+endLabelsSvg+
+    '</svg>';
+
+  const legend = series.map(function(s){
+    const last = data[data.length-1];
+    return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:14px;">'+
+      '<span style="width:8px;height:8px;border-radius:50%;background:'+s.color+';display:inline-block;"></span>'+
+      s.label+' '+s.fmt(last[s.key])+s.unit+
+      '</span>';
+  }).join('');
+
+  wrap.innerHTML = '<div class="hero" style="display:block;padding-bottom:14px;">'+svg+
+    '<div style="font-family:var(--f-mono);font-size:10px;color:var(--text-dim);margin-top:4px;">'+legend+'</div>'+
+    '<div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:6px;">'+
+    '<span>'+data[0].date+'</span><span>각 지표는 자체 범위 내 상대값으로 표시돼요</span><span>'+data[data.length-1].date+'</span></div></div>';
+}
+
+function plRenderOverloadChart(){
+  const wrap = document.getElementById('pl-overload-chart');
+  if(!wrap) return;
+  const today = new Date();
+  const weeks = [];
+  for(let i=7;i>=0;i--){
+    const end = new Date(today); end.setDate(today.getDate()-i*7);
+    const start = new Date(end); start.setDate(end.getDate()-6);
+    weeks.push({ start:start, end:end });
+  }
+  const weekData = weeks.map(function(wk){
+    const items = PL_WORKOUTS.filter(function(w){
+      const d = plFromISO(w.date);
+      return d>=wk.start && d<=wk.end;
+    });
+    const totalDur = items.reduce(function(a,w){ return a+w.duration; },0);
+    const rpeList = items.map(function(w){ return w.rpe; }).filter(function(v){ return v!=null; });
+    return { totalDur: totalDur, avgRpe: rpeList.length ? plAvg(rpeList) : null, hasData: items.length>0, label: (wk.start.getMonth()+1)+'/'+wk.start.getDate() };
+  });
+  const activeWeeks = weekData.filter(function(w){ return w.hasData; });
+  if(activeWeeks.length<2){
+    wrap.innerHTML = '<div class="empty" style="padding:20px 10px;">2주 이상 데이터가 쌓이면 진행 추이가 보여요.</div>';
+    return;
+  }
+  const W=320,H=150,padL=8,padR=8,padT=18,padB=22;
+  const n = weekData.length;
+  const stepX = (W-padL-padR)/n;
+  const barW = Math.min(20, stepX*0.5);
+  function xCenter(i){ return padL+stepX*i+stepX/2; }
+  const maxDur = Math.max.apply(null, weekData.map(function(w){ return w.totalDur; }).concat([1]));
+  function barH(dur){ return dur>0 ? (dur/maxDur)*(H-padT-padB) : 0; }
+
+  const bars = weekData.map(function(w,i){
+    const h = barH(w.totalDur);
+    return '<rect x="'+(xCenter(i)-barW/2)+'" y="'+(H-padB-h)+'" width="'+barW+'" height="'+h+'" rx="3" fill="var(--blue)" fill-opacity="'+(w.hasData?0.55:0.12)+'"/>';
+  }).join('');
+  const labels = weekData.map(function(w,i){
+    return '<text x="'+xCenter(i)+'" y="'+(H-padB+14)+'" font-size="9" fill="var(--text-faint)" font-family="JetBrains Mono, monospace" text-anchor="middle">'+w.label+'</text>';
+  }).join('');
+
+  let rpeSvg = '';
+  const rpePoints = weekData.map(function(w,i){ return { i:i, v:w.avgRpe }; }).filter(function(p){ return p.v!=null; });
+  if(rpePoints.length>=2){
+    const rpeVals = rpePoints.map(function(p){ return p.v; });
+    const rMin = Math.min.apply(null, rpeVals), rMax = Math.max.apply(null, rpeVals);
+    function yAtRpe(frac){ return padT + (1-frac)*(H-padT-padB-18); }
+    const pts = rpePoints.map(function(p){ return xCenter(p.i)+','+yAtRpe(plNormalize(p.v, rMin, rMax)); }).join(' ');
+    const dots = rpePoints.map(function(p){
+      return '<circle cx="'+xCenter(p.i)+'" cy="'+yAtRpe(plNormalize(p.v, rMin, rMax))+'" r="3" fill="var(--red)" stroke="var(--surface)" stroke-width="1.5"/>';
+    }).join('');
+    rpeSvg = '<polyline points="'+pts+'" fill="none" stroke="var(--red)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+dots;
+  }
+
+  const svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:170px;">'+bars+rpeSvg+labels+'</svg>';
+  const legend = '<div style="font-family:var(--f-mono);font-size:10px;color:var(--text-dim);margin-top:2px;">'+
+    '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:14px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--blue);opacity:0.55;display:inline-block;"></span>주간 총 운동시간</span>'+
+    (rpePoints.length>=2 ? '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;"></span>주간 평균 체감강도(RPE)</span>' : '')+
+    '</div>';
+  wrap.innerHTML = '<div class="hero" style="display:block;padding-bottom:14px;">'+svg+legend+'</div>';
 }
 
 function plRenderTrendRows(){
