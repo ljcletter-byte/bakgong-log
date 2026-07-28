@@ -1871,6 +1871,23 @@ function plRenderHistory(){
         }
       }
     }
+    // 이번 달 강도별(색깔별) 통계
+    let csLow=0, csMid=0, csHigh=0;
+    mo.items.forEach(function(w){
+      if(w.avgHr==null || allHr.length<2){ csLow++; return; }
+      const pos = (w.avgHr - hrMin) / hrRange;
+      if(pos>0.66) csHigh++; else if(pos>0.33) csMid++; else csLow++;
+    });
+    const csTotal = (csLow+csMid+csHigh) || 1;
+    const csBar = '<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:10px;background:var(--surface-2);">'+
+      (csLow? '<span style="width:'+(csLow/csTotal*100)+'%;background:var(--green);"></span>':'')+
+      (csMid? '<span style="width:'+(csMid/csTotal*100)+'%;background:var(--amber);"></span>':'')+
+      (csHigh? '<span style="width:'+(csHigh/csTotal*100)+'%;background:var(--red);"></span>':'')+
+      '</div>'+
+      '<div style="display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--text-dim);font-family:var(--f-mono);">'+
+        '<span>🟢 저강도 '+csLow+'</span><span>🟠 중강도 '+csMid+'</span><span>🔴 고강도 '+csHigh+'</span>'+
+      '</div>';
+
     html += '<div class="mon-sum">'+
       '<div class="mon-sum-top">'+
         '<span class="mon-sum-ttl">'+mo.y+'년 '+(mo.m+1)+'월</span>'+
@@ -1878,6 +1895,7 @@ function plRenderHistory(){
       '</div>'+
       '<div class="mon-sum-stats">'+st.count+'회 · '+st.dur.toFixed(0)+'분'+
         (st.count?' · 회당 '+(st.dur/st.count).toFixed(0)+'분':'')+'</div>'+
+      csBar+
     '</div>';
 
     // 막대 기준값: 그 달 최대 운동시간
@@ -1894,16 +1912,20 @@ function plRenderHistory(){
     });
     weekOrder.sort(function(a,b){ return b-a; });
 
-    weekOrder.forEach(function(wk){
+    weekOrder.forEach(function(wk, wi){
       const items = weeks[wk].slice().sort(function(a,b){
         return b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
       });
       const wdur = items.reduce(function(a,w){ return a+w.duration; },0);
-      html += '<div class="wk-sum">'+
+      const blockId = 'wk-block-'+key+'-'+wk;
+      const isOpen = wi===0; // 가장 최근 주차만 기본으로 펼쳐둠
+      html += '<div class="wk-sum" onclick="plToggleWeek(\''+blockId+'\')" style="cursor:pointer;">'+
         '<span class="wk-sum-lbl">'+wk+'주차</span>'+
         '<span class="wk-sum-line"></span>'+
         '<span class="wk-sum-val">'+items.length+'회 · '+wdur.toFixed(0)+'분</span>'+
+        '<span id="'+blockId+'-caret" style="margin-left:8px;color:var(--text-faint);font-size:11px;">'+(isOpen?'▾':'▸')+'</span>'+
       '</div>';
+      html += '<div id="'+blockId+'" style="display:'+(isOpen?'block':'none')+';">';
 
       items.forEach(function(w){
         const d = plFromISO(w.date);
@@ -1947,9 +1969,19 @@ function plRenderHistory(){
           '<div class="h-row-bar"><span style="width:'+barPct+'%;background:'+barColor+'"></span></div>'+
         '</div>';
       });
+      html += '</div>';
     });
   });
   wrap.innerHTML = html;
+}
+
+function plToggleWeek(blockId){
+  const block = document.getElementById(blockId);
+  const caret = document.getElementById(blockId+'-caret');
+  if(!block) return;
+  const isOpen = block.style.display !== 'none';
+  block.style.display = isOpen ? 'none' : 'block';
+  if(caret) caret.textContent = isOpen ? '▸' : '▾';
 }
 
 function plOpenDetail(id){
