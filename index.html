@@ -867,7 +867,7 @@ async function plMigrateFromCode(code){
 async function plLoad(){
   const spinner = document.getElementById('pl-loading-spinner');
   const banner = document.getElementById('pl-storage-banner');
-  spinner.classList.remove('pl-hide');
+  spinner.classList.remove('hide');
   try{
     const doc = await plDb.collection('logs').doc(PL_SYNC_CODE).get();
     PL_WORKOUTS = (doc.exists && doc.data().workoutsJson) ? JSON.parse(doc.data().workoutsJson) : [];
@@ -896,7 +896,7 @@ async function plLoad(){
   plRenderHome();
   plRenderHistory();
   plRenderStats();
-  spinner.classList.add('pl-hide');
+  spinner.classList.add('hide');
   plMaybeShowOnboarding();
 }
 
@@ -910,7 +910,7 @@ let PL_ONBOARD_STEP = 0;
 function plRenderOnboardSlide(){
   const s = PL_ONBOARD_SLIDES[PL_ONBOARD_STEP];
   const dots = PL_ONBOARD_SLIDES.map(function(_, i){
-    return '<span class="pl-onboard-dot'+(i===PL_ONBOARD_STEP?' pl-onboard-dot-active':'')+'"></span>';
+    return '<span class="onboard-dot'+(i===PL_ONBOARD_STEP?' active':'')+'"></span>';
   }).join(' ');
   document.getElementById('pl-onboard-content').innerHTML =
     '<div style="font-size:52px;margin-bottom:14px;">'+s.emoji+'</div>'+
@@ -1058,7 +1058,7 @@ function plResetForm(){
   document.getElementById('pl-rpe-val').textContent = '미입력';
   document.getElementById('f-memo').value = '';
   document.getElementById('f-warmup').checked = false;
-  document.getElementById('pl-form-error').classList.remove('open');
+  document.getElementById('pl-form-error').classList.remove('show');
 }
 
 function plCancelEdit(){
@@ -1109,10 +1109,10 @@ async function plSaveWorkout(){
   const duration = parseFloat(document.getElementById('f-duration').value);
   const err = document.getElementById('pl-form-error');
   if(!plSelectedType || !date || !duration || duration<=0){
-    err.classList.add('open');
+    err.classList.add('show');
     return;
   }
-  err.classList.remove('open');
+  err.classList.remove('show');
   const avgHr = parseFloat(document.getElementById('f-avghr').value);
   const maxHr = parseFloat(document.getElementById('f-maxhr').value);
   const kcalAct = parseFloat(document.getElementById('f-kcalact').value);
@@ -1223,25 +1223,25 @@ let plToastTimer = null;
 function plToast(msg){
   const t = document.getElementById('pl-toast');
   t.textContent = msg;
-  t.classList.add('open');
+  t.classList.add('show');
   clearTimeout(plToastTimer);
-  plToastTimer = setTimeout(function(){ t.classList.remove('open'); }, msg.length>20 ? 3200 : 1800);
+  plToastTimer = setTimeout(function(){ t.classList.remove('show'); }, msg.length>20 ? 3200 : 1800);
 }
 
 function plToastWithAction(msg, actionLabel, actionFn, duration){
   const t = document.getElementById('pl-toast');
   clearTimeout(plToastTimer);
   t.innerHTML = '<span>'+msg+'</span> <button type="button" id="pl-toast-action-btn" style="margin-left:10px;background:none;border:none;color:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:0;">'+actionLabel+'</button>';
-  t.classList.add('open');
+  t.classList.add('show');
   const btn = document.getElementById('pl-toast-action-btn');
   if(btn){
     btn.onclick = function(){
-      t.classList.remove('open');
+      t.classList.remove('show');
       clearTimeout(plToastTimer);
       actionFn();
     };
   }
-  plToastTimer = setTimeout(function(){ t.classList.remove('open'); }, duration || 5000);
+  plToastTimer = setTimeout(function(){ t.classList.remove('show'); }, duration || 5000);
 }
 
 function plRingSVG(w, size){
@@ -2074,8 +2074,8 @@ function plCloseDetail(){
 
 function plSetPeriod(p){
   plCurrentPeriod = p;
-  document.querySelectorAll('.pl-toggle button').forEach(function(b){
-    b.classList.toggle('pl-sel', b.getAttribute('data-period')===p);
+  document.querySelectorAll('.period-seg button').forEach(function(b){
+    b.classList.toggle('sel', b.getAttribute('data-period')===p);
   });
   plRenderStats();
 }
