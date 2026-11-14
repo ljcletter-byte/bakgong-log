@@ -10,6 +10,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root{
+  --f-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --card-green-a:#f0fdf4;--card-green-b:#dcfce7;--card-green-bd:#bbf7d0;--card-green-tx:#065f46;
+  --card-blue-a:#eff6ff;--card-blue-b:#dbeafe;--card-blue-bd:#bfdbfe;--card-blue-tx:#1e40af;
+  --glass:rgba(255,255,255,0.97);--veil:rgba(255,255,255,.85);
   --bg:#f7f9fc;
   --surface:#ffffff;
   --surface-2:#f0f4f8;
@@ -39,6 +43,9 @@
   --sh-lg:0 12px 36px rgba(0,0,0,0.10);
 }
 body.dark{
+  --card-green-a:#0c2a22;--card-green-b:#0f3a2e;--card-green-bd:#1d5a45;--card-green-tx:#a7f3d0;
+  --card-blue-a:#0f2038;--card-blue-b:#12304f;--card-blue-bd:#1e4a7a;--card-blue-tx:#bfdbfe;
+  --glass:rgba(23,29,43,0.97);--veil:rgba(15,20,32,.85);
   --bg:#0f1420;
   --surface:#171d2b;
   --surface-2:#1f2636;
@@ -75,7 +82,7 @@ input,button,textarea,select{font-family:inherit;}
 
 /* ── BOTTOM NAV ── */
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:480px;background:rgba(255,255,255,0.97);
+  width:100%;max-width:480px;background:var(--glass);
   backdrop-filter:blur(14px);border-top:1px solid var(--border);
   display:flex;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:10;}
 .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
@@ -173,8 +180,8 @@ input,button,textarea,select{font-family:inherit;}
 .bmi-pill.high{background:var(--red-l);color:#991b1b;}
 
 /* 루틴 카드 */
-.routine-card{background:linear-gradient(135deg,#f0fdf4,#e8f5e9);
-  border:1px solid #bbf7d0;border-radius:var(--r-lg);padding:16px;margin-bottom:12px;}
+.routine-card{background:linear-gradient(135deg,var(--card-green-a),var(--card-green-b));
+  border:1px solid var(--card-green-bd);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;}
 .routine-card-title{font-size:14px;font-weight:700;margin-bottom:8px;}
 .routine-list{font-size:12px;color:var(--text-dim);line-height:2;}
 
@@ -276,16 +283,16 @@ input,button,textarea,select{font-family:inherit;}
 .heat-legend-box{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .heat-cell{aspect-ratio:1;border-radius:5px;background:var(--surface-2);display:flex;
   align-items:center;justify-content:center;font-size:9px;color:var(--text-faint);}
-.coach-feedback{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;
+.coach-feedback{background:linear-gradient(135deg,var(--card-green-a),var(--card-green-b));border:1px solid var(--card-green-bd);
   border-radius:var(--r-lg);padding:16px;margin-bottom:10px;}
-.coach-msg{font-size:14px;color:#065f46;line-height:1.6;font-weight:500;}
+.coach-msg{font-size:14px;color:var(--card-green-tx);line-height:1.6;font-weight:500;}
 .coach-note{font-size:10px;color:#6ee7b7;margin-top:8px;}
 .ai-coach-wrap{margin-bottom:10px;}
 .ai-coach-btn{width:100%;padding:12px;border-radius:var(--r-md);border:1.5px solid var(--green);
   background:none;color:var(--green);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;}
-.ai-result{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;
+.ai-result{background:linear-gradient(135deg,var(--card-blue-a),var(--card-blue-b));border:1px solid var(--card-blue-bd);
   border-radius:var(--r-lg);padding:14px;}
-.ai-result-msg{font-size:13px;color:#1e40af;line-height:1.6;}
+.ai-result-msg{font-size:13px;color:var(--card-blue-tx);line-height:1.6;}
 .ai-note{font-size:10px;color:#93c5fd;margin-top:8px;}
 .month-compare{background:var(--surface-2);border-radius:var(--r-lg);padding:14px;margin-bottom:10px;}
 .compare-msg{font-size:14px;color:var(--text-dim);line-height:1.6;}
@@ -367,7 +374,7 @@ input,button,textarea,select{font-family:inherit;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* 스피너 */
-.spinner-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:55;
+.spinner-overlay{position:fixed;inset:0;background:var(--veil);z-index:55;
   display:flex;align-items:center;justify-content:center;}
 .spinner-overlay.hide{display:none;}
 .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);
@@ -443,23 +450,24 @@ input,button,textarea,select{font-family:inherit;}
     <div id="pl-body-wrap"></div>
     <div class="sec-label">오늘의 루틴 추천</div>
     <div class="routine-card">
-      <div class="routine-card-title">🔥 라이딩 전 워밍업 (5~10분)</div>
+      <div class="routine-card-title">🔥 훌라후프 전 워밍업 (5분)</div>
       <div class="routine-list">
-        · 가벼운 페달링: 저항 최소로 3~5분<br>
-        · 다리 스윙: 벽 짚고 앞뒤·좌우로 흔들기, 좌우 각 10회<br>
-        · 무릎 들어 올리기: 제자리에서 높이 들며 걷기 30초<br>
-        · 발목 돌리기: 앉은 상태로 크게 원 그리기, 좌우 각 10회<br>
-        · 마지막 2~3분은 저항을 서서히 올려 목표 강도까지
+        · 허리 돌리기: 손을 허리에 얹고 크게 원 그리기, 좌우 각 10회<br>
+        · 고관절 돌리기: 한 다리씩 크게 원 그리기, 좌우 각 10회<br>
+        · 옆구리 늘리기: 팔을 머리 위로 올려 좌우로 기울이기, 각 10회<br>
+        · 가볍게 제자리 걷기 1~2분 (심박을 천천히 올리기)<br>
+        · 처음 2~3분은 가볍게 돌리다 점차 속도를 올리기
       </div>
-      <div class="routine-card-title" style="margin-top:14px;">🧘 라이딩 후 스트레칭</div>
+      <div class="routine-card-title" style="margin-top:14px;">🧘 훌라후프 후 스트레칭</div>
       <div class="routine-list">
-        · 고관절 굴곡근: 런지 자세 15~30초, 좌우<br>
-        · 대퇴사두근: 서서 발목 당기기 15~30초, 좌우<br>
-        · 햄스트링: 다리 뻗고 상체 숙이기 15~30초<br>
-        · 종아리: 벽 짚고 뒤꿈치 눌러주기 15~30초
+        · 옆구리(복사근): 팔을 머리 위로 뻗고 옆으로 기울여 15~30초, 좌우<br>
+        · 허리: 누워 무릎을 가슴으로 당겨 안고 15~30초<br>
+        · 고관절: 런지 자세 15~30초, 좌우<br>
+        · 엉덩이: 누워 한쪽 발목을 반대 무릎에 올려 당기기 15~30초, 좌우
       </div>
-      <div class="routine-card-title" style="margin-top:14px;">💪 페달링 보완 근력 (주 2~3회)</div>
-      <div class="routine-list">스쿼트 · 런지 · 힙 쓰러스트 · 플랭크</div>
+      <div class="routine-card-title" style="margin-top:14px;">💪 훌라후프 보완 근력 (주 2~3회)</div>
+      <div class="routine-list">플랭크 · 사이드 플랭크 · 데드버그 · 힙 브릿지 · 스쿼트</div>
+      <div class="routine-list" style="margin-top:6px;">· 한쪽 방향으로만 돌리면 한쪽 근육만 발달해요. 양방향으로 번갈아 돌려보세요.<br>· 허리·갈비뼈 쪽에 멍이나 통증이 생기면 후프 무게를 줄이거나 쉬세요.</div>
       <div style="font-size:11px;color:#6ee7b7;margin-top:10px;">일반적인 가이드예요. 통증이 있다면 전문가와 상담하세요.</div>
     </div>
     <button class="btn-secondary" onclick="plShareWeekImage()">📊 이번 주 요약 이미지 저장</button>
@@ -478,11 +486,32 @@ input,button,textarea,select{font-family:inherit;}
     </div>
     <div class="calc-hint" id="pl-duration-display">시작/종료 시간을 입력해주세요</div>
     <input type="hidden" id="f-duration">
-    <div class="form-row">
-      <div><label class="form-lbl">평균 심박수</label><input class="form-input" type="number" id="f-avghr" placeholder="예: 108"></div>
-      <div><label class="form-lbl">거리 (km)</label><input class="form-input" type="number" step="0.01" id="f-distance" oninput="plUpdateSpeedDisplay()" placeholder="예: 9.8"></div>
+    <div class="form-group"><label class="form-lbl">평균 심박수</label><input class="form-input" type="number" id="f-avghr" placeholder="예: 108"></div>
+    <div id="pl-dist-fields">
+      <div class="form-group"><label class="form-lbl">거리 (km)</label><input class="form-input" type="number" step="0.01" id="f-distance" oninput="plUpdateSpeedDisplay()" placeholder="예: 9.8"></div>
+      <div class="calc-hint" id="pl-speed-display" style="margin-top:-8px;">거리를 입력하면 속도가 자동 계산돼요.</div>
     </div>
-    <div class="calc-hint" id="pl-speed-display" style="margin-top:-8px;">거리를 입력하면 속도가 자동 계산돼요.</div>
+    <div id="pl-hoop-fields" style="display:none;">
+      <div class="sec-label">훌라후프 정보</div>
+      <div class="form-row">
+        <div><label class="form-lbl">후프 무게 (kg)</label><input class="form-input" type="number" step="0.1" id="f-hoop-kg" placeholder="예: 1.2"></div>
+        <div><label class="form-lbl">후프 지름 (cm)</label><input class="form-input" type="number" step="1" id="f-hoop-cm" placeholder="예: 100"></div>
+      </div>
+      <div class="form-row">
+        <div><label class="form-lbl">회전 방향</label>
+          <select class="form-input" id="f-hoop-dir">
+            <option value="">선택 안 함</option><option value="오른쪽">오른쪽</option><option value="왼쪽">왼쪽</option><option value="양방향">양방향</option>
+          </select></div>
+        <div><label class="form-lbl">최장 연속 (분)</label><input class="form-input" type="number" step="0.5" id="f-hoop-streak" placeholder="예: 8"></div>
+      </div>
+      <div class="form-row">
+        <div><label class="form-lbl">떨어뜨린 횟수</label><input class="form-input" type="number" step="1" id="f-hoop-drops" placeholder="예: 3"></div>
+        <div><label class="form-lbl">허리·갈비뼈 불편감</label>
+          <select class="form-input" id="f-hoop-pain">
+            <option value="">선택 안 함</option><option value="0">없음</option><option value="1">약간</option><option value="2">심함</option>
+          </select></div>
+      </div>
+    </div>
     <button type="button" class="more-toggle" id="opt-toggle" onclick="plToggleOptional()">
       <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
       더 입력하기 (칼로리·최고심박수·체감강도·메모)
@@ -493,6 +522,7 @@ input,button,textarea,select{font-family:inherit;}
         <div><label class="form-lbl">활동 칼로리</label><input class="form-input" type="number" id="f-kcalact" placeholder="예: 118"></div>
       </div>
       <div class="form-group"><label class="form-lbl">총 칼로리</label><input class="form-input" type="number" id="f-kcaltotal" placeholder="예: 167"></div>
+      <div class="calc-hint" style="margin-top:-8px;">칼로리를 비워 두면 심박수·나이·체중·성별로 추정해서 저장해요(추정 표시).</div>
       <div class="form-group">
         <label class="form-lbl">체감 강도 (RPE) <span style="font-size:11px;color:var(--text-faint);">선택</span></label>
         <div class="rpe-wrap">
@@ -518,6 +548,7 @@ input,button,textarea,select{font-family:inherit;}
     <div style="display:flex;gap:8px;margin-bottom:14px;">
       <select class="form-input" id="pl-history-type-filter" style="flex:1;" onchange="plSetHistoryTypeFilter(this.value)">
         <option value="all">전체 종류</option>
+        <option value="훌라후프">훌라후프</option>
         <option value="실내자전거">실내자전거</option>
         <option value="러닝">러닝</option>
         <option value="걷기">걷기</option>
@@ -587,7 +618,9 @@ input,button,textarea,select{font-family:inherit;}
     <div class="sec-label">프로필</div>
     <div class="form-group"><label class="form-lbl">키 (cm)</label><input class="form-input" type="number" id="s-height" step="0.1" placeholder="예: 170"></div>
     <div class="form-group"><label class="form-lbl">나이 <span style="font-size:10px;color:var(--text-faint);">선택</span></label><input class="form-input" type="number" id="s-age" placeholder="예: 35"></div>
-    <div class="calc-hint" style="margin-bottom:10px;">입력하면 이론적 최대심박수(220-나이)를 참고로 보여드려요.</div>
+    <div class="form-group"><label class="form-lbl">성별 <span style="font-size:10px;color:var(--text-faint);">칼로리 추정용 · 선택</span></label>
+      <select class="form-input" id="s-gender"><option value="">선택 안 함</option><option value="M">남성</option><option value="F">여성</option></select></div>
+    <div class="calc-hint" style="margin-bottom:10px;">나이를 입력하면 이론적 최대심박수(220-나이)를 참고로 보여드려요.</div>
     <div class="sec-label">목표</div>
     <div class="form-row">
       <div><label class="form-lbl">일일 목표 (분)</label><input class="form-input" type="number" id="s-daily-min" step="5"></div>
@@ -595,7 +628,7 @@ input,button,textarea,select{font-family:inherit;}
     </div>
     <div class="form-row">
       <div><label class="form-lbl">주간 목표 (분)</label><input class="form-input" type="number" id="s-weekly-min" step="10"></div>
-      <div><label class="form-lbl">월간 거리 (km)</label><input class="form-input" type="number" id="s-monthly-km" step="5"></div>
+      <div><label class="form-lbl">월간 운동 시간 (분)</label><input class="form-input" type="number" id="s-monthly-min" step="30"></div>
     </div>
     <button class="btn-primary" onclick="plSaveSettings()">저장</button>
     <div class="sec-label">AI 코칭</div>
@@ -661,7 +694,8 @@ const PL_FIREBASE_CONFIG = {
 firebase.initializeApp(PL_FIREBASE_CONFIG);
 const plDb = firebase.firestore();
 const PL_ZONE_HEX = ['#3b82f6','#10b981','#10b981','#f59e0b','#ef4444'];
-const PL_TYPES = ['실내자전거','러닝','걷기','기타'];
+const PL_TYPES = ['훌라후프','실내자전거','러닝','걷기','기타'];
+function plEsc(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 let PL_WORKOUTS = [];
 let PL_BODYLOGS = [];
 let plSelectedType = null;
@@ -681,7 +715,7 @@ function plGetFilteredWorkouts(){
     return true;
   });
 }
-let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50, heightCm:null, age:null };
+let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50, monthlyGoalMin:600, heightCm:null, age:null, gender:null };
 
 function plPad(n){ return n<10 ? '0'+n : ''+n; }
 function plToISO(d){ return d.getFullYear()+'-'+plPad(d.getMonth()+1)+'-'+plPad(d.getDate()); }
@@ -982,6 +1016,32 @@ function plSelectType(t){
   document.querySelectorAll('#pl-type-chips .chip').forEach(function(c){
     c.classList.toggle('sel', c.getAttribute('data-type')===t);
   });
+  plToggleTypeFields();
+}
+
+function plToggleTypeFields(){
+  const isHoop = (plSelectedType==='훌라후프');
+  document.getElementById('pl-hoop-fields').style.display = isHoop ? 'block' : 'none';
+  document.getElementById('pl-dist-fields').style.display = isHoop ? 'none' : 'block';
+}
+
+function plLatestWeight(){
+  const sorted = PL_BODYLOGS.filter(function(b){ return b.weight; }).sort(function(a,b){ return b.date.localeCompare(a.date); });
+  return sorted.length ? sorted[0].weight : null;
+}
+
+// 심박 기반 칼로리 추정 (Keytel 등 일반 공식, 오차 10~20% 가능)
+function plEstimateKcal(avgHr, durationMin){
+  const weight = plLatestWeight();
+  const age = PL_SETTINGS.age, g = PL_SETTINGS.gender;
+  if(!avgHr || !durationMin || !weight || !age || !g) return null;
+  const perMin = (g==='M')
+    ? (-55.0969 + 0.6309*avgHr + 0.1988*weight + 0.2017*age)/4.184
+    : (-20.4022 + 0.4472*avgHr - 0.1263*weight + 0.074*age)/4.184;
+  if(!(perMin>0)) return null;
+  const total = perMin*durationMin;
+  const active = Math.max(0, total - 1.0*weight*(durationMin/60));
+  return { total: Math.round(total), active: Math.round(active) };
 }
 
 function plParseTimeToMinutes(str){
@@ -1058,6 +1118,9 @@ function plResetForm(){
   document.getElementById('pl-rpe-val').textContent = '미입력';
   document.getElementById('f-memo').value = '';
   document.getElementById('f-warmup').checked = false;
+  ['f-hoop-kg','f-hoop-cm','f-hoop-dir','f-hoop-streak','f-hoop-drops','f-hoop-pain'].forEach(function(id){ document.getElementById(id).value = ''; });
+  plToggleTypeFields();
+  document.getElementById('pl-form-error').textContent = '운동 종류, 날짜, 시작/종료 시간을 입력해주세요.';
   document.getElementById('pl-form-error').classList.remove('show');
 }
 
@@ -1094,6 +1157,13 @@ function plStartEdit(id){
   else { PL_RPE_TOUCHED = false; document.getElementById('pl-rpe-val').textContent = '미입력'; }
   document.getElementById('f-memo').value = w.memo || '';
   document.getElementById('f-warmup').checked = !!w.hadWarmup;
+  document.getElementById('f-hoop-kg').value = w.hoopKg!=null ? w.hoopKg : '';
+  document.getElementById('f-hoop-cm').value = w.hoopCm!=null ? w.hoopCm : '';
+  document.getElementById('f-hoop-dir').value = w.hoopDir || '';
+  document.getElementById('f-hoop-streak').value = w.maxStreakMin!=null ? w.maxStreakMin : '';
+  document.getElementById('f-hoop-drops').value = w.drops!=null ? w.drops : '';
+  document.getElementById('f-hoop-pain').value = w.discomfort!=null ? String(w.discomfort) : '';
+  plToggleTypeFields();
   if(w.maxHr!=null || w.kcalActive!=null || w.kcalTotal!=null || w.rpe!=null || w.memo || w.hadWarmup){
     document.getElementById('opt-section').classList.add('open');
     document.getElementById('opt-toggle').innerHTML = '<span>▼</span> 더 입력하기 (칼로리·최고심박수·메모)';
@@ -1115,9 +1185,25 @@ async function plSaveWorkout(){
   err.classList.remove('show');
   const avgHr = parseFloat(document.getElementById('f-avghr').value);
   const maxHr = parseFloat(document.getElementById('f-maxhr').value);
-  const kcalAct = parseFloat(document.getElementById('f-kcalact').value);
-  const kcalTot = parseFloat(document.getElementById('f-kcaltotal').value);
-  const distance = parseFloat(document.getElementById('f-distance').value);
+  let kcalAct = parseFloat(document.getElementById('f-kcalact').value);
+  let kcalTot = parseFloat(document.getElementById('f-kcaltotal').value);
+  const showErr = function(m){ err.textContent = m; err.classList.add('show'); };
+  if(date > plToday()){ showErr('미래 날짜는 기록할 수 없어요.'); return; }
+  if(duration>600){ showErr('운동 시간이 10시간을 넘어요. 시작/종료 시간을 확인해주세요.'); return; }
+  if(!isNaN(avgHr) && (avgHr<30 || avgHr>250)){ showErr('평균 심박수는 30~250 사이로 입력해주세요.'); return; }
+  if(!isNaN(maxHr) && (maxHr<30 || maxHr>250)){ showErr('최고 심박수는 30~250 사이로 입력해주세요.'); return; }
+  if(!isNaN(avgHr) && !isNaN(maxHr) && maxHr<avgHr){ showErr('최고 심박수가 평균 심박수보다 낮을 수 없어요.'); return; }
+  let kcalEstimated = false;
+  if(isNaN(kcalAct) && isNaN(kcalTot) && !isNaN(avgHr)){
+    const est = plEstimateKcal(avgHr, duration);
+    if(est){ kcalAct = est.active; kcalTot = est.total; kcalEstimated = true; }
+  }
+  const isHoop = (plSelectedType==='훌라후프');
+  const numOrNull = function(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
+  const hoopStreak = isHoop ? numOrNull('f-hoop-streak') : null;
+  if(hoopStreak!=null && hoopStreak>duration+0.01){ showErr('최장 연속 시간이 운동 시간보다 길 수 없어요.'); return; }
+  const painVal = document.getElementById('f-hoop-pain').value;
+  const distance = isHoop ? NaN : parseFloat(document.getElementById('f-distance').value);
   const speed = (!isNaN(distance) && duration>0) ? (distance/(duration/60)) : NaN;
 
   let existingZones = [0,0,0,0,0];
@@ -1147,7 +1233,14 @@ async function plSaveWorkout(){
     zones: existingZones,
     rpe: PL_RPE_TOUCHED ? parseInt(document.getElementById('f-rpe').value, 10) : null,
     memo: document.getElementById('f-memo').value.trim(),
-    hadWarmup: document.getElementById('f-warmup').checked
+    hadWarmup: document.getElementById('f-warmup').checked,
+    kcalEstimated: kcalEstimated,
+    hoopKg: isHoop ? numOrNull('f-hoop-kg') : null,
+    hoopCm: isHoop ? numOrNull('f-hoop-cm') : null,
+    hoopDir: isHoop ? (document.getElementById('f-hoop-dir').value || null) : null,
+    maxStreakMin: hoopStreak,
+    drops: isHoop ? numOrNull('f-hoop-drops') : null,
+    discomfort: (isHoop && painVal!=='') ? parseInt(painVal,10) : null
   };
 
   const prMessages = [];
@@ -1159,6 +1252,10 @@ async function plSaveWorkout(){
       const distVals = sameType.map(function(o){ return o.distance||0; });
       const maxDist = Math.max.apply(null, distVals);
       if(w.distance!=null && maxDist>0 && w.distance>maxDist) prMessages.push('최장 거리');
+      if(w.maxStreakMin!=null){
+        const prevStreaks = sameType.map(function(o){ return o.maxStreakMin; }).filter(function(v){ return v!=null; });
+        if(prevStreaks.length>0 && w.maxStreakMin>Math.max.apply(null,prevStreaks)) prMessages.push('최장 연속');
+      }
       const hrVals = sameType.map(function(o){ return o.avgHr; }).filter(function(v){ return v!=null; });
       if(w.avgHr!=null && hrVals.length>0){
         const minHr = Math.min.apply(null, hrVals);
@@ -1192,7 +1289,8 @@ async function plSaveWorkout(){
   }
   const wasEdit = !!PL_EDIT_ID;
   const ok = await plPersist();
-  let msg = ok ? (wasEdit?'수정했어요':'저장했어요') : '저장 실패 - 이 화면을 벗어나면 기록이 사라질 수 있어요';
+  let msg = ok ? (wasEdit?'수정했어요':'저장했어요') + (w.kcalEstimated?' (칼로리는 추정값)':'') : '저장 실패 - 이 화면을 벗어나면 기록이 사라질 수 있어요';
+  if(w.discomfort===2){ msg += ' · 허리·갈비뼈 불편이 심하면 쉬고 전문가와 상담하세요'; }
   if(ok && prMessages.length>0){ msg += ' · 🏆 '+prMessages.join(', ')+' 신기록!'; }
   if(ok){
     plToast(msg);
@@ -1357,6 +1455,8 @@ function plRenderHero(){
       '<div class="hero-title">'+w.type+' '+w.duration.toFixed(0)+'분 '+info.emoji+'</div>'+
       '<div class="hero-meta">'+
         (w.distance!=null?'<span class="hero-meta-item">\uD83D\uDCCD '+w.distance.toFixed(1)+'km</span>':'')+
+        (w.hoopKg!=null?'<span class="hero-meta-item">\uD83C\uDF00 '+w.hoopKg+'kg</span>':'')+
+        (w.maxStreakMin!=null?'<span class="hero-meta-item">연속 '+w.maxStreakMin+'분</span>':'')+
         (info.label?'<span class="hero-meta-item">'+info.label+'</span>':'')+
       '</div>'+
     '</div>'+
@@ -1379,8 +1479,9 @@ function plRenderCards(){
     const d = plFromISO(w.date);
     return d.getMonth()===today.getMonth() && d.getFullYear()===today.getFullYear();
   }).length;
-  const weekDist = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=weekStart; })
-    .reduce(function(a,w){ return a+(w.distance||0); },0);
+  const monthAgo = new Date(today); monthAgo.setDate(today.getDate()-29);
+  const streakList = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=monthAgo && w.maxStreakMin!=null; }).map(function(w){ return w.maxStreakMin; });
+  const bestStreak = streakList.length ? Math.max.apply(null, streakList) : null;
 
   let deltaHtml;
   if(delta !== null && delta !== 0){
@@ -1406,13 +1507,13 @@ function plRenderCards(){
       '<div class="trend-card-delta neutral">최근 7일</div>'+
     '</div>'+
     '<div class="trend-card">'+
-      '<div class="trend-card-icon" style="background:var(--purple-l)">\uD83D\uDCCD</div>'+
-      '<div class="trend-card-lbl">이번 주 거리</div>'+
-      '<div class="trend-card-val">'+weekDist.toFixed(1)+'<span class="trend-card-unit"> km</span></div>'+
-      '<div class="trend-card-delta neutral">최근 7일</div>'+
+      '<div class="trend-card-icon" style="background:var(--purple-l)">\uD83C\uDF00</div>'+
+      '<div class="trend-card-lbl">최장 연속(후프)</div>'+
+      '<div class="trend-card-val">'+(bestStreak!=null?bestStreak:'--')+'<span class="trend-card-unit"> 분</span></div>'+
+      '<div class="trend-card-delta neutral">최근 30일</div>'+
     '</div>'+
     '<div class="trend-card">'+
-      '<div class="trend-card-icon" style="background:var(--amber-l)">\uD83D\uDEB4</div>'+
+      '<div class="trend-card-icon" style="background:var(--amber-l)">\uD83C\uDFC3</div>'+
       '<div class="trend-card-lbl">이번 달 횟수</div>'+
       '<div class="trend-card-val">'+monthCount+'<span class="trend-card-unit"> 회</span></div>'+
       '<div class="trend-card-delta neutral">꾸준함이 핵심</div>'+
@@ -1481,7 +1582,8 @@ function plOpenSettings(){
   document.getElementById('s-daily-min').value = PL_SETTINGS.dailyGoal;
   document.getElementById('s-monthly-days').value = PL_SETTINGS.monthlyGoalDays;
   document.getElementById('s-weekly-min').value = PL_SETTINGS.weeklyGoalMin;
-  document.getElementById('s-monthly-km').value = PL_SETTINGS.monthlyGoalKm;
+  document.getElementById('s-monthly-min').value = PL_SETTINGS.monthlyGoalMin || 600;
+  document.getElementById('s-gender').value = PL_SETTINGS.gender || '';
   let savedKey = '';
   try{ savedKey = localStorage.getItem('pl-api-key') || ''; }catch(e){}
   document.getElementById('s-api-key').value = savedKey;
@@ -1518,12 +1620,15 @@ async function plSaveSettings(){
   const daily = parseFloat(document.getElementById('s-daily-min').value);
   const monthDays = parseFloat(document.getElementById('s-monthly-days').value);
   const weekly = parseFloat(document.getElementById('s-weekly-min').value);
-  const monthKm = parseFloat(document.getElementById('s-monthly-km').value);
+  const monthMin = parseFloat(document.getElementById('s-monthly-min').value);
+  const gender = document.getElementById('s-gender').value;
   PL_SETTINGS = {
     dailyGoal: (!isNaN(daily) && daily>0) ? daily : PL_SETTINGS.dailyGoal,
     monthlyGoalDays: (!isNaN(monthDays) && monthDays>0) ? monthDays : PL_SETTINGS.monthlyGoalDays,
     weeklyGoalMin: (!isNaN(weekly) && weekly>0) ? weekly : PL_SETTINGS.weeklyGoalMin,
-    monthlyGoalKm: (!isNaN(monthKm) && monthKm>0) ? monthKm : PL_SETTINGS.monthlyGoalKm,
+    monthlyGoalKm: PL_SETTINGS.monthlyGoalKm,
+    monthlyGoalMin: (!isNaN(monthMin) && monthMin>0) ? monthMin : (PL_SETTINGS.monthlyGoalMin||600),
+    gender: (gender==='M'||gender==='F') ? gender : null,
     heightCm: (!isNaN(height) && height>0) ? height : null,
     age: (!isNaN(age) && age>0) ? age : null
   };
@@ -1964,6 +2069,7 @@ function plRenderHistory(){
             '<div class="h-row-side">'+
               w.duration.toFixed(0)+'분'+
               (w.distance!=null ? '<br>'+w.distance.toFixed(1)+'km' : '')+
+              (w.hoopKg!=null ? '<br>'+w.hoopKg+'kg' : '')+
             '</div>'+
           '</div>'+
           '<div class="h-row-bar"><span style="width:'+barPct+'%;background:'+barColor+'"></span></div>'+
@@ -2003,8 +2109,15 @@ function plOpenDetail(id){
     '<div class="detail-cell"><div class="detail-cell-lbl">총 칼로리</div><div class="detail-cell-val">'+(w.kcalTotal?Math.round(w.kcalTotal):'-')+'</div></div>'+
     (w.distance!=null ? '<div class="detail-cell"><div class="detail-cell-lbl">거리</div><div class="detail-cell-val">'+w.distance.toFixed(1)+'km</div></div>' : '')+
     (w.avgSpeed!=null ? '<div class="detail-cell"><div class="detail-cell-lbl">평균 속도</div><div class="detail-cell-val">'+w.avgSpeed.toFixed(1)+'km/h</div></div>' : '')+
+    (w.hoopKg!=null ? '<div class="detail-cell"><div class="detail-cell-lbl">후프 무게</div><div class="detail-cell-val">'+w.hoopKg+'kg</div></div>' : '')+
+    (w.hoopCm!=null ? '<div class="detail-cell"><div class="detail-cell-lbl">후프 지름</div><div class="detail-cell-val">'+w.hoopCm+'cm</div></div>' : '')+
+    (w.hoopDir ? '<div class="detail-cell"><div class="detail-cell-lbl">회전 방향</div><div class="detail-cell-val">'+plEsc(w.hoopDir)+'</div></div>' : '')+
+    (w.maxStreakMin!=null ? '<div class="detail-cell"><div class="detail-cell-lbl">최장 연속</div><div class="detail-cell-val">'+w.maxStreakMin+'분</div></div>' : '')+
+    (w.drops!=null ? '<div class="detail-cell"><div class="detail-cell-lbl">떨어뜨림</div><div class="detail-cell-val">'+w.drops+'회</div></div>' : '')+
+    (w.discomfort!=null ? '<div class="detail-cell"><div class="detail-cell-lbl">허리·갈비뼈</div><div class="detail-cell-val">'+['없음','약간','심함'][w.discomfort]+'</div></div>' : '')+
     '</div>'+
-    (w.memo ? '<div class="memo-box">'+w.memo+'</div>' : '')+
+    (w.kcalEstimated ? '<div class="calc-hint" style="margin-top:10px;">칼로리는 심박수·나이·체중·성별로 추정한 값이에요(오차 10~20%).</div>' : '')+
+    (w.memo ? '<div class="memo-box">'+plEsc(w.memo)+'</div>' : '')+
     '<button type="button" class="btn-primary" style="margin-top:20px;margin-bottom:0;" onclick="plStartEdit(\''+id+'\')">수정하기</button>'+
     '<div id="pl-delete-zone"></div>';
   plRenderDeleteButton(id);
@@ -2094,13 +2207,14 @@ function plRenderStats(){
   }
   const totalDur = filtered.reduce(function(a,w){ return a+w.duration; },0);
   const totalKcal = filtered.reduce(function(a,w){ return a+(w.kcalTotal||0); },0);
-  const totalDist = filtered.reduce(function(a,w){ return a+(w.distance||0); },0);
+  const stList = filtered.filter(function(w){ return w.maxStreakMin!=null; }).map(function(w){ return w.maxStreakMin; });
+  const bestStreakP = stList.length ? Math.max.apply(null, stList) : null;
   const avgHrList = filtered.map(function(w){ return w.avgHr; }).filter(Boolean);
   const avgHr = avgHrList.length ? Math.round(plAvg(avgHrList)) : 0;
 
   document.getElementById('pl-summary-grid').innerHTML =
-    '<div class="sum-cell"><div class="trend-card-lbl">🚴 운동 · 시간</div><div class="detail-cell-val">'+filtered.length+'<span style="font-size:13px;"> 회</span></div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">'+totalDur.toFixed(0)+'분</div></div>'+
-    '<div class="sum-cell"><div class="trend-card-lbl">📍 총 거리</div><div class="detail-cell-val">'+totalDist.toFixed(1)+'<span style="font-size:13px;"> km</span></div></div>'+
+    '<div class="sum-cell"><div class="trend-card-lbl">🏃 운동 · 시간</div><div class="detail-cell-val">'+filtered.length+'<span style="font-size:13px;"> 회</span></div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">'+totalDur.toFixed(0)+'분</div></div>'+
+    '<div class="sum-cell"><div class="trend-card-lbl">🌀 최장 연속</div><div class="detail-cell-val">'+(bestStreakP!=null?bestStreakP:'-')+'<span style="font-size:13px;"> 분</span></div></div>'+
     '<div class="sum-cell"><div class="trend-card-lbl">🔥 총 칼로리</div><div class="detail-cell-val">'+totalKcal.toFixed(0)+'<span style="font-size:13px;"> kcal</span></div></div>'+
     '<div class="sum-cell"><div class="trend-card-lbl">❤️ 평균 심박수</div><div class="detail-cell-val">'+(avgHr||'-')+'<span style="font-size:13px;"> bpm</span></div></div>';
 
@@ -2110,12 +2224,13 @@ function plRenderStats(){
     filtered.forEach(function(w){ uniqueDates[w.date] = (uniqueDates[w.date]||0)+w.duration; });
     const achievedDays = Object.keys(uniqueDates).filter(function(d){ return uniqueDates[d]>=PL_SETTINGS.dailyGoal; }).length;
     const pct = Math.min(100, achievedDays/PL_SETTINGS.monthlyGoalDays*100);
-    const distPct = Math.min(100, totalDist/PL_SETTINGS.monthlyGoalKm*100);
+    const goalMin = PL_SETTINGS.monthlyGoalMin || 600;
+    const distPct = Math.min(100, totalDur/goalMin*100);
     challengeEl.innerHTML =
       '<div class="goal-card" style="margin-top:2px;margin-bottom:20px;">'+
       '<div class="goal-row" style="margin-bottom:8px;"><span>이번 달 목표 ('+PL_SETTINGS.dailyGoal+'분 이상 운동일)</span><span>'+achievedDays+' / '+PL_SETTINGS.monthlyGoalDays+'일</span></div>'+
       '<div class="goal-bar"><span style="width:'+pct+'%;background:var(--green)"></span></div>'+
-      '<div class="goal-row" style="margin-top:14px;margin-bottom:8px;"><span>이번 달 거리 목표</span><span>'+totalDist.toFixed(1)+' / '+PL_SETTINGS.monthlyGoalKm+'km</span></div>'+
+      '<div class="goal-row" style="margin-top:14px;margin-bottom:8px;"><span>이번 달 운동 시간 목표</span><span>'+totalDur.toFixed(0)+' / '+goalMin+'분</span></div>'+
       '<div class="goal-bar"><span style="width:'+distPct+'%;background:var(--blue)"></span></div>'+
       '</div>';
   } else {
@@ -2219,6 +2334,8 @@ async function plGenerateAiCoaching(){
     return w.date+' '+w.type+' '+w.duration.toFixed(0)+'분'+
       (w.avgHr?' 평균심박수'+Math.round(w.avgHr)+'bpm':'')+
       (w.distance!=null?' 거리'+w.distance.toFixed(1)+'km':'')+
+      (w.hoopKg!=null?' 후프'+w.hoopKg+'kg':'')+
+      (w.maxStreakMin!=null?' 최장연속'+w.maxStreakMin+'분':'')+
       (w.rpe!=null?' 체감강도'+w.rpe+'/10':'');
   }).join('\n');
 
@@ -2292,9 +2409,35 @@ function plRenderCoachFeedback(){
 
   let icon = '💬', msg = '';
 
-  if(avgRpe!=null && avgRpe>=8.3 && recent.length>=4){
+  const hoopRecent = recent.filter(function(w){ return w.type==='훌라후프' && w.avgHr; });
+  let hoopMsg = null;
+  if(hoopRecent.length>=4){
+    const hh = Math.floor(hoopRecent.length/2);
+    const f = hoopRecent.slice(0,hh), l = hoopRecent.slice(hh);
+    const hrF = plAvg(f.map(function(w){ return w.avgHr; })), hrL = plAvg(l.map(function(w){ return w.avgHr; }));
+    const kgF = plAvg(f.map(function(w){ return w.hoopKg||0; })), kgL = plAvg(l.map(function(w){ return w.hoopKg||0; }));
+    const stF = f.map(function(w){ return w.maxStreakMin; }).filter(function(v){ return v!=null; });
+    const stL = l.map(function(w){ return w.maxStreakMin; }).filter(function(v){ return v!=null; });
+    if(kgL > kgF+0.05){
+      hoopMsg = ['⬆️','후프 무게를 올렸어요. 그래서 심박수가 조금 올라가는 건 자연스러워요. 새 무게에 몸이 적응할 때까지 시간을 짧게 가져가 보세요.'];
+    } else if(hrL < hrF*0.97){
+      hoopMsg = ['📈','같은 후프로 평균 심박수가 최근 '+((hrF-hrL)/hrF*100).toFixed(0)+'% 내려갔어요. 체력이 늘고 있다는 신호예요. 무게나 시간을 조금 올려볼 때예요.'];
+    } else if(hrL > hrF*1.05){
+      hoopMsg = ['🔋','같은 후프인데 평균 심박수가 올랐어요. 수면·수분·피로를 살펴보고 하루 정도 쉬어가 보세요.'];
+    } else if(stF.length && stL.length && Math.max.apply(null,stL) > Math.max.apply(null,stF)){
+      hoopMsg = ['🌀','쉬지 않고 돌린 최장 시간이 늘고 있어요. 균형감과 코어 힘이 좋아지고 있어요.'];
+    }
+  }
+  const painRecent = recent.filter(function(w){ return w.discomfort>=1; });
+
+  if(painRecent.length>=2){
+    icon = '⚠️';
+    msg = '최근 허리·갈비뼈 불편감이 여러 번 기록됐어요. 후프 무게를 낮추거나 며칠 쉬고, 계속되면 전문가와 상담하세요.';
+  } else if(avgRpe!=null && avgRpe>=8.3 && recent.length>=4){
     icon = '😮‍💨';
     msg = '최근 체감강도가 계속 높게 나오고 있어요. 무리하고 있을 수 있으니, 하루 이틀은 가볍게 쉬거나 강도를 낮춰보는 걸 추천해요.';
+  } else if(hoopMsg){
+    icon = hoopMsg[0]; msg = hoopMsg[1];
   } else if(effFirst!=null && effSecond!=null && effSecond > effFirst*1.03){
     icon = '📈';
     const pct = ((effSecond-effFirst)/effFirst*100).toFixed(0);
@@ -2311,7 +2454,7 @@ function plRenderCoachFeedback(){
     msg = '최근 2주간 운동 빈도가 낮아졌어요. 부담 없이 짧게라도 다시 리듬을 만들어보는 걸 추천해요.';
   } else if(activeDayRatio >= 0.3){
     icon = '💪';
-    msg = '꾸준히 잘 이어가고 있어요. 같은 페이스가 편안하게 느껴진다면, 시간이나 거리를 조금씩 늘려보는 것도 좋겠어요.';
+    msg = '꾸준히 잘 이어가고 있어요. 같은 페이스가 편안하게 느껴진다면, 시간이나 강도를 조금씩 늘려보는 것도 좋겠어요.';
   } else {
     msg = '데이터가 더 쌓이면 좀 더 구체적인 피드백을 드릴 수 있어요.';
   }
@@ -2358,7 +2501,7 @@ function plRenderMonthCompare(){
   const lines = [];
   if(cur.eff!=null && prev.eff!=null){
     const pct = ((cur.eff-prev.eff)/prev.eff*100);
-    if(pct>3) lines.push('심박 효율이 지난달보다 '+pct.toFixed(0)+'% 좋아졌어요 🎉 같은 심박수로 더 빠르게 타고 있어요.');
+    if(pct>3) lines.push('심박 효율이 지난달보다 '+pct.toFixed(0)+'% 좋아졌어요 🎉 같은 심박수로 더 빠르게 움직이고 있어요.');
     else if(pct<-3) lines.push('심박 효율이 지난달보다 '+Math.abs(pct).toFixed(0)+'% 낮아졌어요. 컨디션을 살펴보세요.');
     else lines.push('심박 효율이 지난달과 비슷한 수준을 유지하고 있어요.');
   }
@@ -2367,6 +2510,14 @@ function plRenderMonthCompare(){
     if(Math.abs(diff)>=2){
       lines.push('평균 심박수가 지난달보다 '+(diff>0?'+':'')+diff.toFixed(0)+'bpm '+(diff<0?'낮아졌어요.':'높아졌어요.'));
     }
+  }
+  const hoopBest = function(ym){
+    return PL_WORKOUTS.filter(function(w){ const d=plFromISO(w.date); return d.getFullYear()===ym.y && d.getMonth()===ym.m && w.maxStreakMin!=null; })
+      .reduce(function(a,w){ return Math.max(a,w.maxStreakMin); },0);
+  };
+  const hbCur = hoopBest(thisYm), hbPrev = hoopBest(lastYm);
+  if(hbCur>0 && hbPrev>0 && hbCur!==hbPrev){
+    lines.push('후프 최장 연속 시간이 지난달 '+hbPrev+'분 → 이번 달 '+hbCur+'분'+(hbCur>hbPrev?'으로 늘었어요 🎉':'이에요.'));
   }
   if(lines.length===0) lines.push('꾸준히 비슷한 페이스를 유지하고 있어요.');
 
