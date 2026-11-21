@@ -369,7 +369,7 @@ svg text{font-variant-numeric:tabular-nums;}
 .overlay.open{display:flex;}
 .ov-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .ov-title{font-size:18px;font-weight:800;}
-.ov-close{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+.ov-close{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);
   background:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 /* 상세 */
 .detail-ring-wrap{display:flex;justify-content:center;margin-bottom:20px;position:relative;}
@@ -458,6 +458,39 @@ svg text{font-variant-numeric:tabular-nums;}
 .sbar.best .sbar-fill{background:var(--green);}
 .sbar-dates{display:flex;gap:6px;}
 .sbar-dates span{flex:1;min-width:0;text-align:center;font-size:12px;color:var(--text-faint);white-space:nowrap;font-variant-numeric:tabular-nums;}
+
+/* 체중 가져오기 */
+#pl-bimport-overlay{word-break:keep-all;overflow-wrap:anywhere;}      /* 한글 낱말이 중간에서 끊기지 않게 */
+.sec-btns{display:flex;gap:6px;}
+.vis-hide{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;}
+.bi-lead{font-size:14px;line-height:1.7;color:var(--text);margin-bottom:12px;}
+.bi-steps{margin:0 0 14px;padding-left:20px;font-size:13px;line-height:1.7;color:var(--text);}
+.bi-steps li{margin-bottom:6px;}
+.bi-file-btn{display:block;text-align:center;}
+.bi-note{font-size:12px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;}
+.bi-err{background:var(--red-l);color:var(--red-tx);border-radius:var(--r-md);padding:12px 14px;font-size:13px;line-height:1.6;margin-bottom:12px;}
+.bi-card{background:var(--surface-2);border-radius:var(--r-lg);padding:14px;margin-bottom:12px;}
+.bi-big{font-size:15px;color:var(--text);}
+.bi-big b{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;}
+.bi-sub{font-size:12px;color:var(--text-dim);margin-top:2px;font-variant-numeric:tabular-nums;}
+.bi-rows{border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:12px;overflow:hidden;}
+.bi-rows > div{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);}
+.bi-rows > div:last-child{border-bottom:none;}
+.bi-rows b{font-variant-numeric:tabular-nums;white-space:nowrap;}
+.bi-check{display:flex;gap:10px;align-items:center;min-height:44px;padding:6px 0;font-size:13px;line-height:1.5;color:var(--text);margin:0 0 4px;cursor:pointer;}
+.bi-check input{width:22px;height:22px;flex:0 0 auto;accent-color:var(--green);}
+.bi-paste{margin:6px 0 14px;border:1px solid var(--border);border-radius:var(--r-md);padding:0 12px;}
+.bi-paste[open]{padding-bottom:12px;}
+.bi-paste summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:48px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;}
+.bi-paste summary::-webkit-details-marker{display:none;}
+.bi-paste summary::after{content:'▸';font-size:14px;flex-shrink:0;}
+.bi-paste[open] summary::after{content:'▾';}
+.bi-paste[open] summary{margin-bottom:4px;}
+.bi-ta{min-height:120px;resize:vertical;line-height:1.5;margin-bottom:8px;}
+.bi-file-name{font-size:13px;font-weight:700;word-break:break-all;margin-bottom:6px;}
+.bi-bar{height:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:8px 0 6px;}
+.bi-fill{height:100%;background:var(--green);transition:width .15s;}
+.bi-pct{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);margin-bottom:10px;}
 
 /* 데스크톱 */
 @media(min-width:860px){
@@ -771,6 +804,14 @@ svg text{font-variant-numeric:tabular-nums;}
     <div class="form-group"><label class="form-lbl">안정시 심박수 (bpm)</label><input class="form-input" type="number" id="b-resting-hr" placeholder="예: 58"></div>
     <div class="calc-hint">기상 직후 누운 채로 측정하면 가장 정확해요. 꾸준히 낮아지면 심폐체력이 좋아지고 있다는 신호예요.</div>
     <button class="btn-primary" onclick="plSaveBodyLog()">저장</button>
+    <button class="btn-secondary" onclick="plOpenBodyImport()">체중계 기록 가져오기 (아이폰 건강 앱)</button>
+  </div>
+
+  <!-- 체중 가져오기 오버레이 -->
+  <div class="overlay" id="pl-bimport-overlay">
+    <div class="ov-hdr"><div class="ov-title">체중 가져오기</div><button class="ov-close" onclick="plCloseBodyImport()" aria-label="닫기">×</button></div>
+    <input type="file" id="pl-bi-file" class="vis-hide" onchange="plBiFileChosen(this)" aria-label="건강 앱 내보내기 파일 고르기">
+    <div id="pl-bi-body"></div>
   </div>
 
   <!-- 온보딩 오버레이 -->
@@ -1258,6 +1299,39 @@ function plApplyOp(st, op){
     const j = st.bodyLogs.findIndex(function(b){ return b && b.date===op.rec.date; });
     if(j>-1) st.bodyLogs[j] = Object.assign(plClone(op.rec), { id: st.bodyLogs[j].id || op.rec.id });
     else st.bodyLogs.push(plClone(op.rec));
+  } else if(op.t==='setBodyWeights'){
+    // 날짜별 체중만 채워 넣어요. 같은 날의 허리둘레·안정시 심박수 등은 그대로 두고,
+    // 이미 적힌 다른 체중은 replace일 때만 바꿔요. (몇 번 적용해도 결과가 같아요)
+    const idx = new Map();
+    st.bodyLogs.forEach(function(b, i){ if(b && typeof b.date==='string') idx.set(b.date, i); });
+    op.items.forEach(function(it){
+      const i = idx.get(it.date);
+      if(i===undefined){
+        st.bodyLogs.push({ id: it.id, date: it.date, weight: it.weight, restingHr: null, waist: null });
+        idx.set(it.date, st.bodyLogs.length-1);
+      } else {
+        const b = st.bodyLogs[i];
+        if(op.replace || b.weight==null || b.weight==='' || isNaN(Number(b.weight))) st.bodyLogs[i] = Object.assign({}, b, { weight: it.weight });
+      }
+    });
+  } else if(op.t==='undoBodyWeights'){
+    // 방금 가져온 값만 되돌려요. 그 뒤에 직접 고친 날(값이 달라졌거나 허리·심박수가 적힌 날)은 건드리지 않아요.
+    const idx = new Map();
+    st.bodyLogs.forEach(function(b, i){ if(b && typeof b.date==='string') idx.set(b.date, i); });
+    const drop = new Set();
+    (op.added||[]).forEach(function(a){
+      const i = idx.get(a.date);
+      if(i===undefined) return;
+      const b = st.bodyLogs[i];
+      if(b.weight===a.weight && b.restingHr==null && b.waist==null) drop.add(a.date);
+    });
+    (op.changed||[]).forEach(function(c){
+      const i = idx.get(c.date);
+      if(i===undefined) return;
+      const b = st.bodyLogs[i];
+      if(b.weight===c.weight) st.bodyLogs[i] = Object.assign({}, b, { weight: c.prev });
+    });
+    if(drop.size) st.bodyLogs = st.bodyLogs.filter(function(b){ return !(b && drop.has(b.date)); });
   } else if(op.t==='settings'){
     st.settings = Object.assign({}, st.settings, op.value);
   }
@@ -1271,6 +1345,14 @@ function plValidOp(op){
   if(op.t==='addMany') return Array.isArray(op.recs) && op.recs.every(okRec);
   if(op.t==='delSamples') return true;
   if(op.t==='putBody') return !!(op.rec && typeof op.rec==='object' && typeof op.rec.date==='string');
+  if(op.t==='setBodyWeights') return Array.isArray(op.items) && op.items.length<=20000 && op.items.every(function(it){
+    return !!(it && typeof it.date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(it.date) && typeof it.id==='string' && typeof it.weight==='number' && it.weight>=20 && it.weight<=300);
+  });
+  if(op.t==='undoBodyWeights'){
+    const okU = function(x){ return !!(x && typeof x.date==='string' && typeof x.weight==='number'); };
+    return Array.isArray(op.added) && Array.isArray(op.changed) && op.added.every(okU) &&
+      op.changed.every(function(c){ return okU(c) && (c.prev===null || typeof c.prev==='number'); });
+  }
   if(op.t==='settings') return !!(op.value && typeof op.value==='object');
   return false;
 }
@@ -1343,7 +1425,7 @@ function plRunTransaction(ops){
       const e = new Error('too big'); e.code = 'too-big'; throw e;
     }
     const data = { workoutsJson: out.workoutsJson, updatedAt: Date.now() };
-    if(ops.some(function(o){ return o.t==='putBody'; })) data.bodyLogsJson = out.bodyLogsJson;
+    if(ops.some(function(o){ return o.t==='putBody' || o.t==='setBodyWeights' || o.t==='undoBodyWeights'; })) data.bodyLogsJson = out.bodyLogsJson;
     if(ops.some(function(o){ return o.t==='settings'; })) data.settingsJson = out.settingsJson;
     tx.set(ref, data, { merge:true });
     return out;
@@ -2905,7 +2987,8 @@ function plRenderBodyCard(){
           '<div class="body-mini-bmi">몸무게·허리둘레를 적어보세요</div>'+
         '</div>'+
         '<span class="btn-sm">+ 기록</span>'+
-      '</div>';
+      '</div>'+
+      '<div style="margin-top:8px;"><button type="button" class="btn-sm" style="width:100%;" onclick="plOpenBodyImport()">⬇ 체중계 기록 가져오기 (아이폰 건강 앱)</button></div>';
     return;
   }
 
@@ -2932,7 +3015,7 @@ function plRenderBodyCard(){
   }
   if(!PL_SETTINGS.heightCm && (ws.length || cs.length)) sub.push('설정에서 키를 입력하면 BMI·허리-신장비도 보여드려요');
 
-  wrap.innerHTML = '<div class="sec-row"><div class="sec-label">몸 기록</div><button type="button" class="btn-sm" onclick="plOpenBodyLog()">+ 기록</button></div>'+
+  wrap.innerHTML = '<div class="sec-row"><div class="sec-label">몸 기록</div><div class="sec-btns"><button type="button" class="btn-sm" onclick="plOpenBodyImport()">체중 가져오기</button><button type="button" class="btn-sm" onclick="plOpenBodyLog()">+ 기록</button></div></div>'+
     '<div class="body-card" onclick="plOpenBodyLog()">'+
       '<div class="body-cols">'+plBodyCol('몸무게', ws, 'weight', 'kg', 1)+plBodyCol('허리둘레', cs, 'waist', 'cm', 1)+'</div>'+
       (sub.length ? '<div class="body-sub">'+sub.map(function(x){ return '<span class="nb">'+x+'</span>'; }).join(' · ')+'</div>' : '')+
@@ -3006,6 +3089,625 @@ function plUpdateWhtrPreview(){
 }
 
 
+
+/* ===============================================================
+   체중 가져오기 — 아이폰 '건강' 앱에서 내보낸 파일(export.zip / export.xml) 또는 붙여 넣은 목록
+   - 건강 앱 파일에서 '체중(BodyMass)' 기록만 골라, 날짜마다 그날 첫 측정값 하나를 몸 기록에 넣어요.
+   - 파일은 이 기기 안에서 조금씩 읽기만 하고 서버로 보내지 않아요. 저장되는 건 날짜별 체중뿐이에요.
+   - 이미 적은 허리둘레·안정시 심박수는 건드리지 않고, 이미 적힌 다른 체중은 기본적으로 그대로 둬요.
+   =============================================================== */
+const PL_BI_TYPE_ATTR = 'type="HKQuantityTypeIdentifierBodyMass"';
+const PL_BI_KEEP = 4096;                 // 조각과 조각 사이에 걸친 태그를 놓치지 않으려고 남겨 두는 글자 수
+const PL_BI_MAX_TEXT = 5*1024*1024;      // 붙여 넣는 목록·글자 파일의 크기 한도
+const PL_BI_MAX_RECS = 300000;           // 한 파일에서 읽는 체중 기록 수 한도(메모리 보호)
+const PL_BI_BODY_JSON_MAX = 300000;      // 몸 기록 전체 크기 한도(글자 수). 문서 크기 제한에 여유를 둬요.
+const PL_BI_ENTRY_CHARS = 100;           // 날짜 하나를 더 저장할 때 늘어나는 글자 수(넉넉하게 잡음)
+const PL_BI_LIST_NAME = '붙여 넣은 목록';
+let PL_BI = null;                        // 가져오기 화면 상태
+let PL_LAST_BI = null;                   // 방금 가져온 내용(되돌리기용)
+
+function plBiErr(code){ const e = new Error(code); e.code = code; return e; }
+
+// XML 속성값의 &amp; &lt; &#39; 같은 표기를 원래 글자로
+function plBiUnxml(s){
+  if(s.indexOf('&')<0) return s;
+  return s.replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, function(m, g){
+    if(g==='amp') return '&';
+    if(g==='lt') return '<';
+    if(g==='gt') return '>';
+    if(g==='quot') return '"';
+    if(g==='apos') return "'";
+    const cp = (g.charAt(1)==='x') ? parseInt(g.slice(2), 16) : parseInt(g.slice(1), 10);
+    try{ return String.fromCodePoint(cp); }catch(e){ return ''; }
+  });
+}
+
+function plBiToKg(v, unit){
+  if(typeof v!=='number' || !isFinite(v)) return null;
+  const u = String(unit||'kg').toLowerCase();
+  if(u==='kg') return v;
+  if(u==='lb' || u==='lbs') return v*0.45359237;
+  if(u==='g') return v/1000;
+  if(u==='st') return v*6.35029318;
+  return null;
+}
+
+function plBiIsDate(iso){
+  const p = String(iso).split('-');
+  const y = +p[0], mo = +p[1], d = +p[2];
+  if(!(y>=1990 && y<=2100)) return false;
+  const t = new Date(y, mo-1, d);
+  return t.getFullYear()===y && t.getMonth()===mo-1 && t.getDate()===d;
+}
+
+// ── 건강 앱 파일(XML) 훑기 ────────────────────────────────────
+// 기록 하나 = [출처 이름, 날짜(YYYY-MM-DD), 시각(HH:MM:SS), kg]
+function plBiNewAcc(){ return { tail:'', recs:[], seen:0, badUnit:0, badValue:0, badDate:0, over:0 }; }
+
+function plBiTake(acc, tag){
+  acc.seen++;
+  const at = Object.create(null);
+  tag.replace(/([A-Za-z_][\w:.-]*)="([^"]*)"/g, function(m, k, v){ if(!(k in at)) at[k] = v; return m; });
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/.exec(at.startDate || at.endDate || at.creationDate || '');
+  if(!m || !plBiIsDate(m[1])){ acc.badDate++; return; }
+  const raw = parseFloat(at.value);
+  if(!isFinite(raw)){ acc.badValue++; return; }
+  const kg = plBiToKg(raw, at.unit ? plBiUnxml(at.unit).trim() : 'kg');
+  if(kg==null){ acc.badUnit++; return; }
+  if(kg<20 || kg>300){ acc.badValue++; return; }
+  if(acc.recs.length>=PL_BI_MAX_RECS){ acc.over++; return; }
+  const src = (plBiUnxml(at.sourceName||'').trim() || '(이름 없음)').slice(0, 60);
+  acc.recs.push([src, m[1], m[2], Math.round(kg*10)/10]);
+}
+
+// 읽어 온 글자 한 조각을 훑어서 체중 기록을 모아요. 조각 끝에 걸린 태그는 다음 조각과 이어서 처리해요.
+function plBiScan(acc, chunk){
+  const buf = acc.tail + chunk;
+  let pos = 0, consumed = 0;
+  for(;;){
+    const k = buf.indexOf(PL_BI_TYPE_ATTR, pos);
+    if(k<0) break;
+    const a = buf.lastIndexOf('<Record', k);
+    if(a<consumed){ pos = k + PL_BI_TYPE_ATTR.length; continue; }      // 태그 시작을 찾지 못한 경우(깨진 파일)는 건너뜀
+    const b = buf.indexOf('>', k);
+    if(b<0){ acc.tail = buf.slice(a); return; }                        // 태그가 아직 끝나지 않음 → 다음 조각에서 이어서
+    plBiTake(acc, buf.slice(a, b+1));
+    pos = consumed = b + 1;
+  }
+  acc.tail = buf.slice(Math.max(consumed, buf.length - PL_BI_KEEP));
+}
+
+// ── 붙여 넣은 목록(날짜 체중) 읽기 ───────────────────────────
+// 한 줄에 하나: 2026-11-22 70.2 / 2026.11.22, 70.2kg / 2026/11/22 07:10 70.2 / 2026년 11월 22일 70.2
+function plBiParseLine(s){
+  const m = /^(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})\s*일?\.?(?:\s*\([월화수목금토일]\))?/.exec(s);
+  if(!m) return null;
+  const iso = m[1]+'-'+plPad(+m[2])+'-'+plPad(+m[3]);
+  if(!plBiIsDate(iso)) return null;
+  let rest = s.slice(m[0].length);
+  let time = '';
+  const t = /^[\sT,;|]*(오전|오후|am|pm)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?/i.exec(rest);
+  if(t){
+    let hh = +t[2];
+    const ap = (t[1] || t[5] || '').toLowerCase();
+    if((ap==='오후' || ap==='pm') && hh<12) hh += 12;
+    if((ap==='오전' || ap==='am') && hh===12) hh = 0;
+    time = plPad(hh)+':'+t[3]+':'+(t[4]||'00');
+    rest = rest.slice(t[0].length);
+  }
+  const w = /^[\s,;:|]*(\d{2,3}(?:\.\d+)?)(?![\d.])\s*(kg|㎏|킬로그램|킬로|lbs?|파운드)?/i.exec(rest);
+  if(!w) return null;
+  if(/^,\d/.test(rest.slice(w[0].length))) return null;                // '70,2'처럼 소수점 쉼표는 잘못 읽기 쉬워서 건너뜀
+  let kg = parseFloat(w[1]);
+  const u = (w[2]||'').toLowerCase();
+  if(u==='lb' || u==='lbs' || u==='파운드') kg *= 0.45359237;
+  if(!(kg>=20 && kg<=300)) return null;
+  return { date:iso, time:time, kg:Math.round(kg*10)/10 };
+}
+
+function plBiParseText(text){
+  const recs = [], samples = [];
+  let skipped = 0;
+  String(text).split(/\r\n|\r|\n/).forEach(function(line){
+    const s = line.trim();
+    if(!s || !/\d/.test(s)) return;                                    // 빈 줄·제목 줄(숫자 없음)은 무시
+    const r = plBiParseLine(s);
+    if(r) recs.push([PL_BI_LIST_NAME, r.date, r.time, r.kg]);
+    else { skipped++; if(samples.length<3) samples.push(s.slice(0, 40)); }
+  });
+  return { kind:'list', recs:recs, stats:{ skipped:skipped, samples:samples } };
+}
+
+// ── 파일 읽기 (zip 안의 export.xml 또는 export.xml 그대로 / 글자 목록) ─────────
+async function plBiBytes(file, a, b){ return new Uint8Array(await file.slice(a, b).arrayBuffer()); }
+function plBiU64(dv, o){ return dv.getUint32(o, true) + dv.getUint32(o+4, true) * 4294967296; }
+function plBiYield(){ return new Promise(function(r){ setTimeout(r, 0); }); }
+
+// zip 맨 뒤의 '목차'에서 export.xml의 위치·크기·압축 방식을 찾아요 (zip64 포함)
+async function plBiZipEntry(file){
+  const size = file.size;
+  if(size<22) throw plBiErr('not-zip');
+  const from = Math.max(0, size - 65535 - 22 - 20);
+  const tail = await plBiBytes(file, from, size);
+  const dv = new DataView(tail.buffer, tail.byteOffset, tail.byteLength);
+  let e = -1, loose = -1;
+  for(let i=tail.length-22; i>=0; i--){
+    if(dv.getUint32(i, true)!==0x06054b50) continue;
+    if(i + 22 + dv.getUint16(i+20, true) === tail.length){ e = i; break; }
+    if(loose<0) loose = i;
+  }
+  if(e<0) e = loose;
+  if(e<0) throw plBiErr('not-zip');
+  let cdSize = dv.getUint32(e+12, true), cdOff = dv.getUint32(e+16, true);
+  if(dv.getUint16(e+10, true)===0xFFFF || cdSize===0xFFFFFFFF || cdOff===0xFFFFFFFF){
+    if(e<20 || dv.getUint32(e-20, true)!==0x07064b50) throw plBiErr('not-zip');
+    const at = plBiU64(dv, e-20+8);
+    const r = await plBiBytes(file, at, at+56);
+    const d2 = new DataView(r.buffer, r.byteOffset, r.byteLength);
+    if(r.length<56 || d2.getUint32(0, true)!==0x06064b50) throw plBiErr('not-zip');
+    cdSize = plBiU64(d2, 40); cdOff = plBiU64(d2, 48);
+  }
+  if(cdOff + cdSize > size || cdSize > 64*1024*1024) throw plBiErr('not-zip');
+  const cd = await plBiBytes(file, cdOff, cdOff + cdSize);
+  const c = new DataView(cd.buffer, cd.byteOffset, cd.byteLength);
+  const td = new TextDecoder('utf-8');
+  let p = 0, best = null;
+  while(p + 46 <= cd.length && c.getUint32(p, true)===0x02014b50){
+    const flags = c.getUint16(p+8, true), method = c.getUint16(p+10, true);
+    let csize = c.getUint32(p+20, true), usize = c.getUint32(p+24, true), lho = c.getUint32(p+42, true);
+    const nl = c.getUint16(p+28, true), xl = c.getUint16(p+30, true), cl = c.getUint16(p+32, true);
+    const name = td.decode(cd.subarray(p+46, p+46+nl));
+    let q = p + 46 + nl;
+    const qe = q + xl;
+    while(q + 4 <= qe){                                                // zip64 확장 필드(id 1): 32비트에 안 들어간 값만 순서대로 들어 있어요
+      const id = c.getUint16(q, true), sz = c.getUint16(q+2, true);
+      if(id===1){
+        let r = q + 4;
+        if(usize===0xFFFFFFFF){ usize = plBiU64(c, r); r += 8; }
+        if(csize===0xFFFFFFFF){ csize = plBiU64(c, r); r += 8; }
+        if(lho===0xFFFFFFFF){ lho = plBiU64(c, r); r += 8; }
+      }
+      q += 4 + sz;
+    }
+    if(/(^|\/)export\.xml$/i.test(name) && (!best || usize>best.usize)) best = { name:name, flags:flags, method:method, csize:csize, usize:usize, lho:lho };
+    p += 46 + nl + xl + cl;
+  }
+  if(!best) throw plBiErr('no-export-xml');
+  if(best.flags & 1) throw plBiErr('zip-encrypted');
+  if(best.method!==0 && best.method!==8) throw plBiErr('zip-unsupported');
+  const lh = await plBiBytes(file, best.lho, best.lho + 30);
+  const l = new DataView(lh.buffer, lh.byteOffset, lh.byteLength);
+  if(lh.length<30 || l.getUint32(0, true)!==0x04034b50) throw plBiErr('zip-corrupt');
+  best.dataStart = best.lho + 30 + l.getUint16(26, true) + l.getUint16(28, true);
+  if(best.dataStart + best.csize > size) throw plBiErr('zip-corrupt');
+  return best;
+}
+
+// 스트림을 조금씩 읽어 글자로 바꾸고 훑어요. 진행률을 알려 주고, 취소하면 바로 멈춰요.
+async function plBiPump(readable, total, acc, ctl, counter){
+  const reader = readable.getReader();
+  const dec = new TextDecoder('utf-8');
+  let outBytes = 0, lastUi = 0;
+  try{
+    for(;;){
+      if(ctl.cancelled) throw plBiErr('cancelled');
+      const r = await reader.read();
+      if(r.done) break;
+      outBytes += r.value.byteLength;
+      if(counter.direct) counter.n += r.value.byteLength;
+      plBiScan(acc, dec.decode(r.value, { stream:true }));
+      const now = Date.now();
+      if(now - lastUi > 120){
+        lastUi = now;
+        if(ctl.onProgress && total>0) ctl.onProgress(Math.min(1, counter.n / total));
+        await plBiYield();
+      }
+    }
+    const rest = dec.decode();
+    if(rest) plBiScan(acc, rest);
+  } finally {
+    if(ctl.cancelled){ try{ await reader.cancel(); }catch(e){} }
+    try{ reader.releaseLock(); }catch(e){}
+  }
+  return outBytes;
+}
+
+function plBiHealthResult(acc){
+  return { kind:'health', recs:acc.recs, stats:{ skipped: acc.badUnit + acc.badValue + acc.badDate + acc.over, samples:[] } };
+}
+
+async function plBiReadFile(file, ctl){
+  const head = await plBiBytes(file, 0, Math.min(file.size, 4));
+  const acc = plBiNewAcc();
+  const counter = { n:0, direct:false };
+  if(head.length>=4 && head[0]===0x50 && head[1]===0x4b && head[2]<=0x07){          // 'PK' → zip
+    const ent = await plBiZipEntry(file);
+    let stream;
+    try{
+      stream = file.slice(ent.dataStart, ent.dataStart + ent.csize).stream();
+      stream = stream.pipeThrough(new TransformStream({ transform:function(chunk, c){ counter.n += chunk.byteLength; c.enqueue(chunk); } }));
+      if(ent.method===8) stream = stream.pipeThrough(new DecompressionStream('deflate-raw'));
+    }catch(e){ throw plBiErr('no-decompress'); }
+    let out;
+    try{ out = await plBiPump(stream, ent.csize, acc, ctl, counter); }
+    catch(e){ throw (e && e.code) ? e : plBiErr('zip-corrupt'); }
+    if(out !== ent.usize) throw plBiErr('zip-corrupt');                            // 목차에 적힌 원래 크기와 다르면 잘리거나 깨진 파일
+    return plBiHealthResult(acc);
+  }
+  const first = new TextDecoder('utf-8').decode(await plBiBytes(file, 0, Math.min(file.size, 65536)));
+  if(/<HealthData[\s>]|<Record\s|^\s*<\?xml/.test(first)){                          // export.xml을 그대로 고른 경우
+    if(typeof file.stream!=='function') throw plBiErr('no-decompress');
+    counter.direct = true;
+    try{ await plBiPump(file.stream(), file.size, acc, ctl, counter); }
+    catch(e){ throw (e && e.code) ? e : plBiErr('read-failed'); }
+    return plBiHealthResult(acc);
+  }
+  if(file.size>PL_BI_MAX_TEXT) throw plBiErr('not-health');
+  return plBiParseText(await file.text());
+}
+
+// ── 날짜별 체중으로 정리하고, 지금 몸 기록과 비교 ───────────────────
+function plBiSources(recs, today){
+  const m = new Map();
+  recs.forEach(function(r){
+    let s = m.get(r[0]);
+    if(!s){ s = { name:r[0], n:0, dates:new Set(), first:r[1], last:r[1] }; m.set(r[0], s); }
+    s.n++; if(!today || r[1]<=today) s.dates.add(r[1]);          // 목록에 보이는 일수는 오늘까지만 세요 (미래 날짜는 어차피 건너뛰어요)
+    if(r[1]<s.first) s.first = r[1];
+    if(r[1]>s.last) s.last = r[1];
+  });
+  const out = [];
+  m.forEach(function(s){ out.push({ name:s.name, n:s.n, days:s.dates.size, first:s.first, last:s.last }); });
+  return out.sort(function(a, b){ return (b.days - a.days) || (a.name < b.name ? -1 : 1); });
+}
+
+// 앳플리 체중계의 기록이 있으면 그 출처를, 없으면 기록이 가장 많은 출처를 먼저 골라 둬요
+function plBiPickSource(sources){
+  if(!sources.length) return null;
+  const hit = sources.filter(function(s){ return /atflee|앳플리|애플리/i.test(s.name); });
+  return (hit.length ? hit[0] : sources[0]).name;
+}
+
+// 날짜마다 그날 첫 측정값 하나 (src가 '*'이면 모든 출처 합쳐서)
+function plBiDays(recs, src){
+  const best = new Map();
+  recs.forEach(function(r){
+    if(src!=='*' && r[0]!==src) return;
+    const cur = best.get(r[1]);
+    if(!cur || r[2]<cur.t) best.set(r[1], { t:r[2], kg:r[3] });
+  });
+  const out = [];
+  best.forEach(function(v, date){ out.push({ date:date, kg:v.kg }); });
+  return out.sort(function(a, b){ return a.date<b.date ? -1 : (a.date>b.date ? 1 : 0); });
+}
+
+function plBiPlan(days, bodyLogs, today){
+  const byDate = new Map();
+  (bodyLogs||[]).forEach(function(b){ if(b && typeof b.date==='string') byDate.set(b.date, b); });
+  const plan = { use:[], add:[], fill:[], same:[], conflict:[], future:0 };
+  days.forEach(function(d){
+    if(d.date>today){ plan.future++; return; }
+    plan.use.push(d);
+    const e = byDate.get(d.date);
+    if(!e){ plan.add.push(d); return; }
+    const ow = Number(e.weight);
+    if(e.weight==null || e.weight==='' || isNaN(ow)) plan.fill.push(d);
+    else if(Math.abs(ow - d.kg) < 0.05) plan.same.push(d);
+    else plan.conflict.push({ date:d.date, kg:d.kg, old:ow });
+  });
+  return plan;
+}
+
+// 실제로 넣을 목록. 몸 기록 전체가 너무 커지지 않도록 새 날짜가 많으면 오래된 것부터 줄여요.
+function plBiWritable(plan, replace){
+  const addSet = new Set(plan.add.map(function(d){ return d.date; }));
+  let list = plan.add.concat(plan.fill);
+  if(replace) list = list.concat(plan.conflict.map(function(c){ return { date:c.date, kg:c.kg }; }));
+  list.sort(function(a, b){ return a.date<b.date ? -1 : (a.date>b.date ? 1 : 0); });
+  const cur = JSON.stringify(PL_BODYLOGS || []).length;
+  const room = Math.max(0, Math.floor((PL_BI_BODY_JSON_MAX - cur) / PL_BI_ENTRY_CHARS));
+  const nAdd = list.reduce(function(n, d){ return n + (addSet.has(d.date) ? 1 : 0); }, 0);
+  let trimmed = 0;
+  if(nAdd>room){
+    let drop = nAdd - room;
+    list = list.filter(function(d){
+      if(drop>0 && addSet.has(d.date)){ drop--; trimmed++; return false; }
+      return true;
+    });
+  }
+  return { list:list, trimmed:trimmed };
+}
+
+function plBiRecompute(st){
+  st.plan = plBiPlan(plBiDays(st.recs, st.src), PL_BODYLOGS, plToday());
+}
+
+// ── 화면 ─────────────────────────────────────────────────────
+function plBiFmtDate(iso){ return iso.replace(/-/g, '.'); }
+function plBiMD(iso){ return iso.slice(5).replace('-', '/'); }
+
+function plBiMsg(code){
+  const m = {
+    'not-zip': 'zip 파일을 열지 못했어요. 건강 앱에서 내보낸 export.zip이 맞는지 확인해 주세요.',
+    'no-export-xml': '이 zip 안에서 건강 데이터(export.xml)를 찾지 못했어요. 건강 앱의 ‘모든 건강 데이터 내보내기’로 만든 export.zip을 골라 주세요.',
+    'zip-encrypted': '암호가 걸린 zip은 열 수 없어요.',
+    'zip-unsupported': '이 zip의 압축 방식은 지원하지 않아요. 파일 앱에서 export.zip을 눌러 압축을 푼 뒤, 안에 있는 export.xml을 골라 주세요.',
+    'no-decompress': '이 폰의 브라우저는 zip을 바로 열지 못해요. 파일 앱에서 export.zip을 눌러 압축을 푼 뒤, 안에 있는 export.xml을 골라 주세요.',
+    'zip-corrupt': '파일이 끝까지 받아지지 않았거나 손상된 것 같아요. 건강 앱에서 다시 내보내 주세요. 계속 안 되면 파일 앱에서 export.zip을 눌러 압축을 푼 뒤, 안에 있는 export.xml을 골라 주세요.',
+    'not-health': '건강 앱 파일(export.zip, export.xml)이나 날짜·체중 목록 파일이 아닌 것 같아요.',
+    'read-failed': '파일을 읽는 도중 문제가 생겼어요. 다시 시도해 주세요.'
+  };
+  return m[code] || '파일을 읽는 중 문제가 생겼어요. 다시 시도해 주세요.';
+}
+
+function plBiFileLabel(text){
+  return '<label for="pl-bi-file" class="btn-primary bi-file-btn">'+text+'</label>';
+}
+
+function plBiStartHtml(){
+  return '<div class="bi-lead">체중계(앳플리)로 잰 체중이 아이폰 <b>건강</b> 앱에 쌓여 있다면, 날짜별로 몸 기록에 넣어 드려요. 이미 적은 허리둘레·안정시 심박수는 그대로 둬요.</div>'+
+    '<ol class="bi-steps">'+
+      '<li><b>건강</b> 앱을 열고 오른쪽 위 내 사진(또는 이니셜)을 눌러요.</li>'+
+      '<li>맨 아래 <b>모든 건강 데이터 내보내기</b> → <b>내보내기</b>를 누르고, 다 만들어지면 <b>파일에 저장</b>을 골라요. 몇 분 걸릴 수 있어요.</li>'+
+      '<li>아래 <b>파일 고르기</b>에서 저장한 <b>export.zip</b>을 골라요.</li>'+
+    '</ol>'+
+    plBiFileLabel('파일 고르기')+
+    '<div class="bi-note">파일은 이 폰 안에서만 읽고 어디로도 보내지 않아요. 건강 정보가 모두 들어 있으니, 가져온 뒤에는 지워도 돼요.</div>'+
+    '<div class="bi-note">앳플리 앱의 건강 앱 연동을 켠 뒤에 잰 체중부터 건강 앱에 쌓여요. 그 전에 잰 체중은 아래 ‘목록 붙여 넣기’로 넣을 수 있어요.</div>'+
+    '<details class="bi-paste"><summary>날짜·체중 목록 붙여 넣기</summary>'+
+      '<div class="bi-note">한 줄에 하나씩, 예: <span class="nb">2026-11-22 70.2</span> (kg)</div>'+
+      '<textarea class="form-input bi-ta" id="pl-bi-text" rows="6" placeholder="2026-11-21 70.4&#10;2026-11-22 70.2" aria-label="날짜와 체중 목록"></textarea>'+
+      '<button type="button" class="btn-secondary" onclick="plBiFromText()">목록 확인</button>'+
+    '</details>';
+}
+
+function plBiReadingHtml(st){
+  return '<div class="bi-file-name">'+plEsc(st.file||'파일')+'</div>'+
+    '<div class="bi-bar"><div class="bi-fill" id="pl-bi-fill" style="width:'+Math.round((st.progress||0)*100)+'%"></div></div>'+
+    '<div class="bi-pct" id="pl-bi-pct" role="status">읽는 중… '+Math.round((st.progress||0)*100)+'%</div>'+
+    '<div class="bi-note">큰 파일은 1~2분 걸릴 수 있어요. 화면을 켜 둔 채 기다려 주세요.</div>'+
+    '<button type="button" class="btn-secondary" onclick="plBiCancel()">취소</button>';
+}
+
+function plBiErrorHtml(st){
+  const s = st.stats && st.stats.samples && st.stats.samples.length
+    ? '<div class="bi-note">읽지 못한 줄 예:<br>'+st.stats.samples.map(function(x){ return '<span class="nb">'+plEsc(x)+'</span>'; }).join('<br>')+'</div>' : '';
+  return '<div class="bi-err" role="alert">'+plEsc(st.msg||'')+'</div>'+s+
+    plBiFileLabel('다른 파일 고르기')+
+    '<button type="button" class="btn-secondary" onclick="plBiRestart()">처음으로</button>';
+}
+
+function plBiPreviewHtml(st){
+  const p = st.plan;
+  const w = plBiWritable(p, st.replace);
+  const n = w.list.length;
+  let h = '';
+  if(p.use.length){
+    h += '<div class="bi-card"><div class="bi-big">체중 기록 <b>'+p.use.length+'일</b></div>'+
+      '<div class="bi-sub">'+plEsc(plBiFmtDate(p.use[0].date))+' ~ '+plEsc(plBiFmtDate(p.use[p.use.length-1].date))+'</div></div>';
+  } else {
+    h += '<div class="bi-card"><div class="bi-big">가져올 수 있는 날짜가 없어요</div></div>';
+  }
+  if(st.sources.length>1){
+    const opts = st.sources.map(function(s, i){
+      return '<option value="'+i+'"'+(s.name===st.src ? ' selected' : '')+'>'+plEsc(s.name)+' · '+s.days+'일</option>';
+    });
+    const todayIso = plToday();
+    opts.push('<option value="*"'+(st.src==='*' ? ' selected' : '')+'>모두 합치기 · '+plBiDays(st.recs, '*').filter(function(d){ return d.date<=todayIso; }).length+'일</option>');
+    h += '<div class="form-group"><label class="form-lbl" for="pl-bi-src">어느 기록을 가져올까요?</label>'+
+      '<select class="form-input" id="pl-bi-src" onchange="plBiSelectSource(this.value)">'+opts.join('')+'</select></div>';
+  } else {
+    h += '<div class="bi-note">출처: '+plEsc(st.sources[0].name)+'</div>';
+  }
+  const row = function(label, count){ return '<div><span>'+label+'</span><b>'+count+'일</b></div>'; };
+  h += '<div class="bi-rows">'+row('새로 넣기', p.add.length)+
+    (p.fill.length ? row('비어 있던 체중칸 채우기', p.fill.length) : '')+
+    (p.same.length ? row('이미 같은 값 (건너뜀)', p.same.length) : '')+
+    (p.conflict.length ? row('다른 값이 이미 적혀 있음', p.conflict.length) : '')+'</div>';
+  if(p.conflict.length){
+    const ex = p.conflict.slice(-3).reverse().map(function(c){
+      return '<div class="nb">'+plEsc(plBiMD(c.date))+' 지금 '+c.old.toFixed(1)+'kg → 가져온 값 '+c.kg.toFixed(1)+'kg</div>';
+    }).join('');
+    h += '<label class="bi-check"><input type="checkbox" id="pl-bi-replace" onchange="plBiToggleReplace(this.checked)"'+(st.replace ? ' checked' : '')+'>'+
+      '<span>다른 값이 적혀 있는 '+p.conflict.length+'일도 가져온 값으로 바꾸기</span></label>'+
+      '<div class="bi-note">체크하지 않으면 그 날들은 지금 적힌 값을 그대로 둬요. 예)'+ex+'</div>';
+  }
+  const recent = w.list.slice(-5).reverse();
+  if(recent.length){
+    h += '<div class="sec-label" style="margin-top:14px;">가져올 기록 (최근 '+recent.length+'일)</div><div class="bi-rows">'+
+      recent.map(function(d){ return '<div><span>'+plEsc(plBiMD(d.date))+'</span><b>'+d.kg.toFixed(1)+' kg</b></div>'; }).join('')+'</div>';
+  }
+  const notes = ['하루에 여러 번 쟀다면 그날 첫 측정값만 써요.'];
+  if(w.trimmed) notes.push('저장 공간을 위해 오래된 '+w.trimmed+'일은 건너뛰었어요.');
+  if(p.future) notes.push('미래 날짜 '+p.future+'일은 건너뛰었어요.');
+  if(st.stats && st.stats.skipped){
+    let t = '읽을 수 없는 값·줄 '+st.stats.skipped+'건은 건너뛰었어요.';
+    if(st.stats.samples && st.stats.samples.length) t += ' 예) '+st.stats.samples.join(' / ');
+    notes.push(t);
+  }
+  h += '<div class="bi-note">'+notes.map(plEsc).join('<br>')+'</div>';
+  if(n) h += '<button type="button" class="btn-primary" onclick="plBiApply()">'+n+'일 가져오기</button>';
+  else h += '<div class="bi-err">새로 넣을 체중이 없어요. (이미 모두 들어 있거나, 건너뛴 값뿐이에요)</div>';
+  h += '<button type="button" class="btn-secondary" onclick="plBiRestart()">다른 파일 고르기</button>';
+  return h;
+}
+
+function plBiRender(){
+  const el = document.getElementById('pl-bi-body');
+  if(!el || !PL_BI) return;
+  const st = PL_BI;
+  el.innerHTML = st.stage==='reading' ? plBiReadingHtml(st)
+    : st.stage==='preview' ? plBiPreviewHtml(st)
+    : st.stage==='error' ? plBiErrorHtml(st)
+    : plBiStartHtml();
+}
+
+function plBiProgress(p){
+  if(!PL_BI) return;
+  PL_BI.progress = p;
+  const f = document.getElementById('pl-bi-fill'), t = document.getElementById('pl-bi-pct');
+  const pct = Math.round(p*100);
+  if(f) f.style.width = pct+'%';
+  if(t) t.textContent = '읽는 중… '+pct+'%';
+}
+
+function plOpenBodyImport(){
+  if(!PL_LOADED || PL_LOAD_FAILED){ plToast('기록을 아직 불러오지 못했어요. 잠시 뒤에 다시 눌러주세요'); return; }
+  if(PL_BI && PL_BI.ctl) PL_BI.ctl.cancelled = true;
+  PL_BI = { stage:'start', msg:'', progress:0, file:'', recs:null, stats:null, sources:[], src:null, replace:false, plan:null, ctl:null };
+  plCloseBodyLog();
+  plBiRender();
+  document.getElementById('pl-bimport-overlay').classList.add('open');
+}
+
+function plCloseBodyImport(){
+  if(PL_BI && PL_BI.ctl) PL_BI.ctl.cancelled = true;
+  PL_BI = null;
+  document.getElementById('pl-bimport-overlay').classList.remove('open');
+}
+
+function plBiRestart(){
+  const st = PL_BI; if(!st) return;
+  if(st.ctl) st.ctl.cancelled = true;
+  st.stage = 'start'; st.msg = ''; st.recs = null; st.plan = null; st.stats = null; st.sources = []; st.src = null; st.replace = false; st.ctl = null;
+  plBiRender();
+}
+
+function plBiCancel(){ if(PL_BI && PL_BI.ctl) PL_BI.ctl.cancelled = true; }
+
+// 큰 파일을 읽는 동안 화면이 저절로 꺼지지 않게 해요 (지원하는 브라우저에서만, 안 되면 그냥 넘어가요)
+let PL_BI_WAKE = null;
+let PL_BI_WAKE_ON = false;
+function plBiWakeOn(){
+  PL_BI_WAKE_ON = true;
+  try{
+    if(navigator.wakeLock && typeof navigator.wakeLock.request==='function'){
+      navigator.wakeLock.request('screen').then(function(l){
+        if(PL_BI_WAKE_ON) PL_BI_WAKE = l;
+        else { try{ l.release(); }catch(e){} }
+      }, function(){});
+    }
+  }catch(e){}
+}
+function plBiWakeOff(){
+  PL_BI_WAKE_ON = false;
+  try{ if(PL_BI_WAKE) PL_BI_WAKE.release(); }catch(e){}
+  PL_BI_WAKE = null;
+}
+
+function plBiSetResult(st, out){
+  st.stats = out.stats;
+  if(!out.recs.length){
+    st.stage = 'error';
+    st.msg = out.kind==='list'
+      ? '읽을 수 있는 줄이 없어요. 한 줄에 날짜와 체중을 적어 주세요. 예: 2026-11-22 70.2'
+      : '이 파일에서 체중 기록을 찾지 못했어요. 앳플리 앱의 건강 앱 연동을 켠 뒤에 잰 체중부터 쌓이고, 건강 앱에서 atflee가 체중을 쓸 수 있게 허용돼 있어야 해요.';
+    plBiRender();
+    return;
+  }
+  st.recs = out.recs;
+  st.sources = plBiSources(out.recs, plToday());
+  st.src = plBiPickSource(st.sources);
+  st.replace = false;
+  st.stage = 'preview';
+  plBiRecompute(st);
+  plBiRender();
+}
+
+async function plBiFileChosen(input){
+  const f = input.files && input.files[0];
+  const st = PL_BI;
+  if(!f || !st) return;
+  const ctl = { cancelled:false, onProgress:plBiProgress };
+  st.stage = 'reading'; st.ctl = ctl; st.file = f.name || ''; st.progress = 0;
+  plBiRender();
+  plBiWakeOn();
+  try{
+    const out = await plBiReadFile(f, ctl);
+    if(PL_BI!==st) return;
+    if(ctl.cancelled){ st.stage = 'start'; plBiRender(); return; }
+    plBiSetResult(st, out);
+  }catch(e){
+    if(PL_BI!==st) return;
+    if(e && e.code==='cancelled' || ctl.cancelled){ st.stage = 'start'; st.msg = ''; }
+    else {
+      // 알려진 이유(잘못된 파일 등)는 사용자에게 안내하는 정상 흐름이라 경고로만 남기고, 예상 밖의 오류만 '오류'로 남겨요
+      if(e && typeof e.code==='string') console.warn('body import:', e.code);
+      else console.error('body import failed', e);
+      st.stage = 'error'; st.msg = plBiMsg(e && e.code); st.stats = null;
+    }
+    plBiRender();
+  }finally{
+    plBiWakeOff();
+    try{ input.value = ''; }catch(e2){}
+  }
+}
+
+function plBiFromText(){
+  const st = PL_BI, el = document.getElementById('pl-bi-text');
+  if(!st || !el) return;
+  if(el.value.length>PL_BI_MAX_TEXT){ st.stage = 'error'; st.msg = plBiMsg('not-health'); plBiRender(); return; }
+  plBiSetResult(st, plBiParseText(el.value));
+}
+
+function plBiSelectSource(v){
+  const st = PL_BI;
+  if(!st || st.stage!=='preview') return;
+  if(v==='*') st.src = '*';
+  else if(st.sources[+v]) st.src = st.sources[+v].name;
+  st.replace = false;
+  plBiRecompute(st);
+  plBiRender();
+}
+
+function plBiToggleReplace(on){
+  const st = PL_BI;
+  if(!st || st.stage!=='preview') return;
+  st.replace = !!on;
+  plBiRender();
+}
+
+// 몸 기록에 넣기. 서버에 반영할 때도 같은 규칙(비어 있으면 채우고, 다른 값은 '바꾸기'를 골랐을 때만 바꿈)으로 처리해요.
+async function plBiApply(){
+  const st = PL_BI;
+  if(!st || st.stage!=='preview') return;
+  plBiRecompute(st);                                        // 미리보기 뒤에 기록이 바뀌었을 수 있으니 한 번 더 계산
+  const w = plBiWritable(st.plan, st.replace);
+  if(!w.list.length){ plBiRender(); return; }
+  const byDate = new Map();
+  PL_BODYLOGS.forEach(function(b){ if(b && typeof b.date==='string') byDate.set(b.date, b); });
+  const items = [], added = [], changed = [];
+  w.list.forEach(function(d){
+    const e = byDate.get(d.date);
+    items.push({ date:d.date, weight:d.kg, id:(e && e.id) ? e.id : plUid() });
+    if(!e) added.push({ date:d.date, weight:d.kg });
+    else changed.push({ date:d.date, weight:d.kg, prev:(e.weight==null || isNaN(Number(e.weight))) ? null : Number(e.weight) });
+  });
+  PL_LAST_BI = { added:added, changed:changed };
+  const flushP = plCommit({ t:'setBodyWeights', items:items, replace:!!st.replace });
+  plCloseBodyImport();
+  plRenderHome();
+  plRenderStats();
+  plToastWithAction('체중 '+items.length+'일을 몸 기록에 넣었어요', '되돌리기', plBiUndo, 10000);
+  const ok = await flushP;
+  if(!ok){
+    plToastWithAction('넣었지만 아직 서버에 저장되지 않았어요. 연결되면 자동으로 저장해요', '지금 저장', plFlushNow, 6000);
+  }
+}
+
+async function plBiUndo(){
+  const u = PL_LAST_BI;
+  PL_LAST_BI = null;
+  if(!u) return;
+  const flushP = plCommit({ t:'undoBodyWeights', added:u.added, changed:u.changed });
+  plRenderHome();
+  plRenderStats();
+  plToast('되돌렸어요');
+  const ok = await flushP;
+  if(!ok){
+    plToastWithAction('아직 서버에 반영되지 않았어요. 연결되면 자동으로 저장해요', '지금 저장', plFlushNow, 6000);
+  }
+}
 
 function plRenderHistory(){
   const wrap = document.getElementById('pl-history-list');
@@ -3714,10 +4416,20 @@ function plRenderMonthCompare(){
   '</div>';
 }
 
+// 몸무게 그래프에 보여줄 기록: 최근 90일 안의 기록 (너무 적으면 최근 10개).
+// 체중계 기록을 가져오면 하루에 하나씩 쌓이므로, 10개만 보여 주면 열흘치밖에 안 보여서 넓혀요.
+function plWeightChartWindow(all){
+  const t = plFromISO(plToday());
+  t.setDate(t.getDate()-90);
+  const cut = plToISO(t);
+  const win = all.filter(function(b){ return b.date>=cut; });
+  return win.length>=10 ? win : all.slice(-10);
+}
+
 function plRenderWeightTrendChart(){
   const wrap = document.getElementById('pl-weight-trend-chart');
   const all = plBodySeries('weight');
-  const sorted = all.slice(-10);
+  const sorted = plWeightChartWindow(all);
   if(sorted.length<2){
     wrap.innerHTML = plEmptyCard('몸무게 기록이 2개 이상 쌓이면 추이가 보여요.');
     return;
@@ -3730,9 +4442,14 @@ function plRenderWeightTrendChart(){
   function yAt(v){ return H-padB-((v-minW)/(maxW-minW))*(H-padT-padB); }
   const points = sorted.map(function(b,i){ return xAt(i)+','+yAt(b.weight); }).join(' ');
   const areaPath = 'M'+xAt(0)+','+(H-padB)+' L'+points.split(' ').join(' L')+' L'+xAt(sorted.length-1)+','+(H-padB)+' Z';
-  const dots = sorted.map(function(b,i){
-    return '<circle cx="'+xAt(i)+'" cy="'+yAt(b.weight)+'" r="4" fill="var(--blue)" stroke="var(--surface)" stroke-width="1.5"/>';
-  }).join('');
+  const n = sorted.length;
+  const dotR = n<=12 ? 4 : (n<=24 ? 3 : (n<=45 ? 2.2 : 0));              // 점이 많으면 작게, 아주 많으면 선만
+  const dotAt = function(i, r){
+    return '<circle cx="'+xAt(i)+'" cy="'+yAt(sorted[i].weight)+'" r="'+r+'" fill="var(--blue)" stroke="var(--surface)" stroke-width="1.5"/>';
+  };
+  let dots = '';
+  if(dotR){ for(let i=0;i<n;i++) dots += dotAt(i, dotR); }
+  if(dotR<4) dots += dotAt(n-1, 4);                                       // 가장 최근 값은 크게
 
   let rhrSvg = '';
   const rhrPoints = sorted.map(function(b,i){ return { i:i, v:b.restingHr }; }).filter(function(p){ return p.v!=null; });
