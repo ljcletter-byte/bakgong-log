@@ -1,9 +1,12 @@
-const CACHE_NAME = 'bakdong-log-v2';
+const CACHE_NAME = 'bakdong-log-v3';
 const ASSETS = ['./index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', function(event){
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache){ return cache.addAll(ASSETS); })
+    caches.open(CACHE_NAME).then(function(cache){
+      // 브라우저의 임시 저장본이 아니라 서버의 최신 파일을 받아서 저장
+      return cache.addAll(ASSETS.map(function(u){ return new Request(u, { cache: 'reload' }); }));
+    })
   );
   self.skipWaiting();
 });
@@ -25,11 +28,11 @@ self.addEventListener('fetch', function(event){
   if(url.origin !== self.location.origin) return;
 
   // 페이지 탐색(주소 입력/새로고침/딥링크) 요청: 네트워크 우선
-  // -> 온라인이면 항상 최신 버전을 받아오고, 받아온 페이지는 캐시에도 갱신해둠
+  // -> 온라인이면 항상 서버의 최신 버전을 확인해서 받아오고(브라우저 임시 저장본을 쓰지 않음), 캐시에도 갱신해둠
   // -> 오프라인일 때만 캐시된 버전으로 대체
   if(event.request.mode === 'navigate'){
     event.respondWith(
-      fetch(event.request).then(function(res){
+      fetch(event.request, { cache: 'no-cache' }).then(function(res){
         const resClone = res.clone();
         caches.open(CACHE_NAME).then(function(cache){ cache.put(event.request, resClone); });
         return res;

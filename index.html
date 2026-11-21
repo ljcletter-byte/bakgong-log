@@ -372,6 +372,7 @@ input,button,textarea,select{font-family:inherit;}
   font-size:13px;opacity:0;pointer-events:none;transition:all .25s;z-index:60;
   max-width:82%;text-align:center;white-space:normal;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast button{pointer-events:auto;}
 
 /* 스피너 */
 .spinner-overlay{position:fixed;inset:0;background:var(--veil);z-index:55;
@@ -383,7 +384,8 @@ input,button,textarea,select{font-family:inherit;}
 @media(prefers-reduced-motion:reduce){.spinner{animation-duration:2s;}}
 
 /* 스토리지 배너 */
-.storage-banner{background:#fee2e2;color:#991b1b;font-size:12px;padding:8px 16px;display:none;}
+.storage-banner{background:#fee2e2;color:#991b1b;font-size:12px;padding:8px 16px;display:none;line-height:1.5;}
+.storage-banner .banner-btn{margin-left:8px;background:#991b1b;color:#fff;border:none;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
 
 /* 데스크톱 */
 @media(min-width:860px){
@@ -424,7 +426,7 @@ input,button,textarea,select{font-family:inherit;}
 
 <div class="app">
   <!-- 스토리지 배너 -->
-  <div class="storage-banner" id="pl-storage-banner">클라우드에 연결할 수 없어요. 인터넷 연결을 확인해주세요.</div>
+  <div class="storage-banner" id="pl-storage-banner" role="status"></div>
 
   <!-- 탑바 -->
   <div class="topbar">
@@ -522,7 +524,7 @@ input,button,textarea,select{font-family:inherit;}
         <div><label class="form-lbl">활동 칼로리</label><input class="form-input" type="number" id="f-kcalact" placeholder="예: 118"></div>
       </div>
       <div class="form-group"><label class="form-lbl">총 칼로리</label><input class="form-input" type="number" id="f-kcaltotal" placeholder="예: 167"></div>
-      <div class="calc-hint" style="margin-top:-8px;">칼로리를 비워 두면 심박수·나이·체중·성별로 추정해서 저장해요(추정 표시).</div>
+      <div class="calc-hint" id="pl-kcal-hint" style="margin-top:-8px;">칼로리를 비워 두면 심박수·나이·체중·성별로 추정해서 저장해요(추정 표시).</div>
       <div class="form-group">
         <label class="form-lbl">체감 강도 (RPE) <span style="font-size:11px;color:var(--text-faint);">선택</span></label>
         <div class="rpe-wrap">
@@ -650,7 +652,9 @@ input,button,textarea,select{font-family:inherit;}
       <button class="btn-sm" style="flex:1;" onclick="plExportJSON()">JSON 내보내기</button>
       <button class="btn-sm" style="flex:1;" onclick="plExportCSV()">CSV 내보내기</button>
     </div>
-    <div style="font-size:11px;color:var(--text-faint);margin-bottom:14px;">삭제 전 백업을 추천해요.</div>
+    <div style="font-size:11px;color:var(--text-faint);margin-bottom:8px;">삭제 전 백업을 추천해요.</div>
+    <div id="pl-usage-line" style="font-size:11px;color:var(--text-faint);margin-bottom:14px;"></div>
+    <button type="button" class="btn-secondary" id="pl-del-samples-btn" style="display:none;margin-bottom:14px;" onclick="plDeleteSamples()">예시 기록 모두 지우기</button>
     <div id="pl-delete-account-zone"></div>
   </div>
 
@@ -715,37 +719,42 @@ function plGetFilteredWorkouts(){
     return true;
   });
 }
-let PL_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50, monthlyGoalMin:600, heightCm:null, age:null, gender:null };
+const PL_DEFAULT_SETTINGS = { dailyGoal:30, monthlyGoalDays:12, weeklyGoalMin:150, monthlyGoalKm:50, monthlyGoalMin:600, heightCm:null, age:null, gender:null };
+let PL_SETTINGS = Object.assign({}, PL_DEFAULT_SETTINGS);
 
 function plPad(n){ return n<10 ? '0'+n : ''+n; }
 function plToISO(d){ return d.getFullYear()+'-'+plPad(d.getMonth()+1)+'-'+plPad(d.getDate()); }
 function plFromISO(s){ const p=s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
 function plToday(){ return plToISO(new Date()); }
+// n일 전 0시. 기록의 날짜는 0시 기준이라, 현재 시각이 섞인 날짜와 비교하면 경계(6일 전 기록)가 빠져요.
+function plDaysAgo(n){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-n); return d; }
 function plUid(){ return 'w_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
 function plAvg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
 
 async function plSeedWeek(){
-  const today = new Date();
-  const memos = ['컨디션 좋았음', '', '', '다리가 조금 무거웠음', '', '', '가볍게 마무리'];
+  const memos = ['컨디션 좋았음', '', '', '다리가 조금 무거웠음', '허리가 조금 뻐근했음', '', '가볍게 마무리'];
+  const weight = plLatestWeight() || 60;
   const sample = [];
   for(let i=6;i>=0;i--){
-    const d = new Date(today); d.setDate(today.getDate()-i);
+    const d = new Date(); d.setDate(d.getDate()-i);
     const dayIndex = 6-i;
     const isWalkDay = (i===3);
-    const type = isWalkDay ? '걷기' : '실내자전거';
-    const duration = isWalkDay ? +(20+Math.random()*5).toFixed(1) : +(26+Math.random()*14).toFixed(1);
-    const avgHr = isWalkDay ? (92+Math.round(Math.random()*6)) : Math.round(112 - dayIndex*1.8 + (Math.random()*4-2));
+    const type = isWalkDay ? '걷기' : '훌라후프';
+    const duration = isWalkDay ? +(20+Math.random()*5).toFixed(1) : +(20+Math.random()*12).toFixed(1);
+    const avgHr = isWalkDay ? (92+Math.round(Math.random()*6)) : Math.round(114 - dayIndex*1.2 + (Math.random()*4-2));
     const maxHr = avgHr + Math.round(10+Math.random()*8);
-    const kcalActive = Math.round(duration*(isWalkDay?2.2:3.2));
-    const kcalTotal = kcalActive + Math.round(20+Math.random()*15);
+    const met = isWalkDay ? 3.5 : 5.8;            // 걷기 / 훌라후프 (신체활동 대사당량표 기준 대략값)
+    const hours = duration/60;
+    const kcalTotal = Math.round(met*weight*hours);
+    const kcalActive = Math.round((met-1)*weight*hours);
     let zones;
     if(isWalkDay){
       zones = [+(duration*0.6).toFixed(1), +(duration*0.4).toFixed(1), 0, 0, 0];
     } else {
       const z1 = +(duration*0.15).toFixed(1);
-      const z2 = +(duration*0.35).toFixed(1);
+      const z2 = +(duration*0.40).toFixed(1);
       const z3 = +(duration*0.30).toFixed(1);
-      const z4 = +(duration*0.13).toFixed(1);
+      const z4 = +(duration*0.10).toFixed(1);
       const z5 = +Math.max(0, duration-(z1+z2+z3+z4)).toFixed(1);
       zones = [z1,z2,z3,z4,z5];
     }
@@ -753,9 +762,9 @@ async function plSeedWeek(){
     const startMinute = Math.floor(Math.random()*30);
     const start = new Date(d); start.setHours(startHour, startMinute, 0, 0);
     const end = new Date(start.getTime()+duration*60000);
-    const avgSpeed = isWalkDay ? +(4.5+Math.random()*1.2).toFixed(1) : +(16+Math.random()*6).toFixed(1);
-    const distance = +(avgSpeed*duration/60).toFixed(1);
-    sample.push({
+    const avgSpeed = isWalkDay ? +(4.5+Math.random()*1.2).toFixed(1) : null;
+    const distance = isWalkDay ? +(avgSpeed*duration/60).toFixed(1) : null;
+    const rec = {
       id: plUid(),
       date: plToISO(d),
       type: type,
@@ -770,18 +779,41 @@ async function plSeedWeek(){
       distance: distance,
       zones: zones,
       rpe: isWalkDay ? 3 : (5+Math.round(Math.random()*2)),
-      memo: memos[dayIndex] || ''
-    });
+      memo: memos[dayIndex] || '',
+      sample: true                                 // '예시 기록 모두 지우기'로 한 번에 지울 수 있게 표시
+    };
+    if(!isWalkDay){
+      rec.hoopKg = 1.1;
+      rec.hoopCm = 100;
+      rec.hoopDir = '양방향';
+      rec.maxStreakMin = Math.min(duration, +(4+dayIndex*0.8).toFixed(1));
+      rec.drops = Math.max(0, 5-dayIndex);
+      rec.discomfort = (dayIndex===4) ? 1 : 0;
+    }
+    sample.push(rec);
   }
-  PL_WORKOUTS = PL_WORKOUTS.concat(sample);
-  const ok = await plPersist();
-  plToast(ok ? '일주일치 예시 기록을 채웠어요' : '저장 실패 - 이 화면을 벗어나면 사라질 수 있어요');
-  plRenderHome();
-  plRenderHistory();
-  plRenderStats();
+  const flushP = plCommit({ t:'addMany', recs: sample });
+  plRenderAll();
+  plToast('일주일치 예시 기록을 채웠어요');
+  const ok = await flushP;
+  if(!ok){
+    plToastWithAction('아직 서버에 저장되지 않았어요. 연결되면 자동으로 저장해요', '지금 저장', plFlushNow, 6000);
+  }
 }
 
-let PL_STORAGE_OK = true;
+async function plDeleteSamples(){
+  const n = PL_WORKOUTS.filter(function(w){ return w.sample; }).length;
+  if(!n){ plToast('지울 예시 기록이 없어요'); return; }
+  const flushP = plCommit({ t:'delSamples' });
+  plCloseSettings();
+  plRenderAll();
+  plToast('예시 기록 '+n+'개를 지웠어요');
+  const ok = await flushP;
+  if(!ok){
+    plToastWithAction('아직 서버에 반영되지 않았어요. 연결되면 자동으로 저장해요', '지금 저장', plFlushNow, 6000);
+  }
+}
+
 let PL_SYNC_CODE = null;
 
 function plNormalizeCode(raw){
@@ -810,6 +842,11 @@ async function plSignInGoogle(){
 }
 
 async function plSignOut(){
+  if(PL_PENDING.length){
+    // 저장하지 못한 변경이 있으면 로그아웃 전에 잠깐 다시 저장을 시도 (최대 4초)
+    await Promise.race([plFlush(), new Promise(function(r){ setTimeout(r, 4000); })]);
+    if(PL_PENDING.length){ plToast('저장하지 못한 변경이 이 기기에 남아 있어요. 같은 계정으로 다시 로그인하면 이어서 저장해요.'); }
+  }
   try{ await firebase.auth().signOut(); }catch(e){}
   plCloseSettings();
 }
@@ -847,8 +884,11 @@ function plExportJSON(){
 
 function plCsvEscape(v){
   if(v==null) v = '';
+  const isText = (typeof v === 'string');
   v = String(v);
-  if(v.indexOf(',')>-1 || v.indexOf('"')>-1 || v.indexOf('\n')>-1){
+  // 엑셀이 '=', '+', '-', '@'로 시작하는 글자를 수식으로 실행하지 않도록 앞에 작은따옴표를 붙여요
+  if(isText && /^[=+\-@\t\r]/.test(v)) v = "'"+v;
+  if(v.indexOf(',')>-1 || v.indexOf('"')>-1 || v.indexOf('\n')>-1 || v.indexOf('\r')>-1){
     v = '"'+v.replace(/"/g,'""')+'"';
   }
   return v;
@@ -856,29 +896,45 @@ function plCsvEscape(v){
 
 function plExportCSV(){
   if(PL_WORKOUTS.length===0){ plToast('내보낼 기록이 없어요'); return; }
-  const fields = ['date','type','startTime','endTime','duration','avgHr','maxHr','kcalActive','kcalTotal','avgSpeed','distance','rpe','memo'];
-  const labels = ['날짜','종류','시작시간','종료시간','운동시간(분)','평균심박수','최고심박수','활동칼로리','총칼로리','평균속도','거리','RPE','메모'];
+  const fields = ['date','type','startTime','endTime','duration','avgHr','maxHr','kcalActive','kcalTotal','kcalEstimated','avgSpeed','distance','hoopKg','hoopCm','hoopDir','maxStreakMin','drops','discomfort','rpe','hadWarmup','memo'];
+  const labels = ['날짜','종류','시작시간','종료시간','운동시간(분)','평균심박수','최고심박수','활동칼로리','총칼로리','칼로리추정여부','평균속도','거리','후프무게(kg)','후프지름(cm)','회전방향','최장연속(분)','떨어뜨린횟수','허리갈비뼈불편(0없음/1약간/2심함)','RPE','워밍업쿨다운','메모'];
+  const yesNo = { kcalEstimated:true, hadWarmup:true };
   const sorted = PL_WORKOUTS.slice().sort(function(a,b){ return a.date.localeCompare(b.date); });
   const rows = sorted.map(function(w){
-    return fields.map(function(f){ return plCsvEscape(w[f]); }).join(',');
+    return fields.map(function(f){ return plCsvEscape(yesNo[f] ? (w[f] ? '예' : '') : w[f]); }).join(',');
   });
-  const csv = '\uFEFF'+labels.join(',')+'\n'+rows.join('\n');
+  const csv = '﻿'+labels.join(',')+'\n'+rows.join('\n');
   plDownloadBlob(csv, 'text/csv;charset=utf-8;', '박동일지_백업_'+plToday()+'.csv');
   plToast('CSV로 내보냈어요');
 }
 
 async function plDeleteAllData(){
+  const uid = PL_SYNC_CODE;
+  if(!uid) return;
+  const savedPending = PL_PENDING;
   try{
-    await plDb.collection('logs').doc(PL_SYNC_CODE).delete();
-    PL_WORKOUTS = [];
+    if(PL_FLUSHING){ await PL_FLUSHING; }          // 저장 중인 작업이 있으면 끝날 때까지 기다림
+    PL_PENDING = [];
+    plSavePending();
+    const ref = plDb.collection('logs').doc(uid);
+    try{
+      await plWithTimeout(ref.delete(), PL_NET_TIMEOUT_MS);
+    }catch(e1){
+      if(e1 && e1.code==='timeout') throw e1;
+      // 보안 규칙이 문서 삭제를 막는 경우에는 빈 기록으로 덮어써서 지워요
+      await plWithTimeout(ref.set({ workoutsJson:'[]', bodyLogsJson:'[]', updatedAt: Date.now() }), PL_NET_TIMEOUT_MS);
+    }
+    plResetState();                                 // 몸무게·목표 등 메모리에 남은 값도 함께 비움
+    PL_LOADED = true;
     plCloseSettings();
-    plRenderHome();
-    plRenderHistory();
-    plRenderStats();
+    plRenderAll();
+    plUpdateStorageBanner();
     plToast('모든 기록을 삭제했어요');
   }catch(e){
     console.error('delete all failed', e);
-    plToast('삭제에 실패했어요. 다시 시도해주세요.');
+    PL_PENDING = savedPending;
+    plSavePending();
+    plToast('삭제에 실패했어요. 연결을 확인하고 다시 시도해주세요.');
   }
 }
 
@@ -887,11 +943,9 @@ async function plMigrateFromCode(code){
     const oldDoc = await plDb.collection('logs').doc(code).get();
     if(!oldDoc.exists || !oldDoc.data().workoutsJson) return;
     const oldWorkouts = JSON.parse(oldDoc.data().workoutsJson);
-    const existingIds = new Set(PL_WORKOUTS.map(function(w){ return w.id; }));
-    const merged = PL_WORKOUTS.concat(oldWorkouts.filter(function(w){ return !existingIds.has(w.id); }));
-    PL_WORKOUTS = merged;
-    await plPersist();
-    plToast('이전 기록을 가져왔어요!');
+    if(!Array.isArray(oldWorkouts)) throw new Error('bad data');
+    const ok = await plCommit({ t:'addMany', recs: oldWorkouts.filter(function(w){ return w && w.id && typeof w.date==='string'; }) });
+    plToast(ok ? '이전 기록을 가져왔어요!' : '이전 기록을 가져왔어요. 서버 저장은 연결되면 자동으로 이어져요.');
   }catch(e){
     console.error('migration failed', e);
     plToast('이전 코드에서 데이터를 가져오지 못했어요.');
@@ -900,25 +954,37 @@ async function plMigrateFromCode(code){
 
 async function plLoad(){
   const spinner = document.getElementById('pl-loading-spinner');
-  const banner = document.getElementById('pl-storage-banner');
+  const uid = PL_SYNC_CODE;
+  if(!uid) return;
   spinner.classList.remove('hide');
+  let stale = false;
   try{
-    const doc = await plDb.collection('logs').doc(PL_SYNC_CODE).get();
-    PL_WORKOUTS = (doc.exists && doc.data().workoutsJson) ? JSON.parse(doc.data().workoutsJson) : [];
-    PL_BODYLOGS = (doc.exists && doc.data().bodyLogsJson) ? JSON.parse(doc.data().bodyLogsJson) : [];
-    if(doc.exists && doc.data().settingsJson){
-      try{ PL_SETTINGS = Object.assign({}, PL_SETTINGS, JSON.parse(doc.data().settingsJson)); }catch(e2){}
+    const doc = await plWithTimeout(plDb.collection('logs').doc(uid).get(), PL_NET_TIMEOUT_MS);
+    if(PL_SYNC_CODE !== uid){ stale = true; }
+    else {
+      const server = plParseDoc(doc.exists ? doc.data() : null);
+      if(!PL_PENDING.length) PL_PENDING = plLoadPending();   // 지난번에 저장하지 못한 변경이 있으면 이어서 반영
+      plRebuildView(server);
+      PL_LOADED = true;
+      PL_LOAD_FAILED = false;
+      PL_LOAD_ERR = '';
     }
-    PL_STORAGE_OK = true;
-    banner.style.display = 'none';
   }catch(e){
-    console.error('load failed', e);
-    PL_WORKOUTS = [];
-    PL_STORAGE_OK = false;
-    banner.style.display = 'block';
+    if(PL_SYNC_CODE !== uid){ stale = true; }
+    else {
+      // 불러오기에 실패해도 서버의 기록을 덮어쓰지 않아요 (저장은 항상 서버의 최신 내용 위에 반영됨)
+      console.error('load failed', e);
+      PL_LOADED = false;
+      PL_LOAD_FAILED = true;
+      PL_LOAD_ERR = (e && e.code) ? String(e.code) : '';
+      if(!PL_PENDING.length) PL_PENDING = plLoadPending();
+      plRebuildView({ workouts:[], bodyLogs:[], settings:Object.assign({}, PL_DEFAULT_SETTINGS) });
+    }
   }
+  if(stale){ if(!PL_SYNC_CODE) spinner.classList.add('hide'); return; }
+  plUpdateStorageBanner();
   const migrateCode = plNormalizeCode(document.getElementById('pl-migrate-code').value);
-  if(migrateCode){
+  if(migrateCode && PL_LOADED){
     document.getElementById('pl-migrate-code').value = '';
     await plMigrateFromCode(migrateCode);
   }
@@ -927,11 +993,13 @@ async function plLoad(){
   if(acctInfo && user){ acctInfo.textContent = (user.email || '구글 계정') + '으로 로그인됨'; }
   const topUser = document.getElementById('pl-topbar-user');
   if(topUser && user){ topUser.textContent = user.email || '구글 계정'; }
-  plRenderHome();
-  plRenderHistory();
-  plRenderStats();
+  plRenderAll();
   spinner.classList.add('hide');
   plMaybeShowOnboarding();
+  if(PL_LOADED && PL_PENDING.length){
+    plToast('저장하지 못했던 변경 '+PL_PENDING.length+'건을 다시 저장하는 중이에요');
+    plFlush().then(function(ok){ if(ok) plToast('저장하지 못했던 변경을 모두 저장했어요'); });
+  }
 }
 
 const PL_ONBOARD_SLIDES = [
@@ -979,20 +1047,299 @@ function plMaybeShowOnboarding(){
   }
 }
 
-async function plPersist(){
-  try{
-    await plDb.collection('logs').doc(PL_SYNC_CODE).set({
-      workoutsJson: JSON.stringify(PL_WORKOUTS),
-      updatedAt: Date.now()
-    }, { merge: true });
-    return true;
-  }catch(e){
-    console.error('storage failed', e);
-    return false;
+/* ===============================================================
+   저장 계층 (기록이 사라지지 않도록)
+   - 화면에 있는 목록을 통째로 서버에 덮어쓰지 않아요.
+   - "무엇을 바꿨는지"(추가·수정·삭제 등)만 모아 두었다가, 서버의 최신 문서를 읽은 뒤
+     그 위에 반영해서 저장해요(트랜잭션). 그래서 다른 기기에서 먼저 저장한 기록이 있어도,
+     불러오기에 실패했어도, 저장 버튼을 연달아 눌러도 기존 기록이 지워지지 않아요.
+   - 저장에 실패한 변경은 이 기기에 보관했다가 연결되면 자동으로 다시 저장해요.
+   =============================================================== */
+const PL_MAX_JSON = 480000;          // 보안 규칙의 한도(500,000자)보다 조금 여유 있게
+const PL_NET_TIMEOUT_MS = 20000;     // 서버 응답을 기다리는 최대 시간
+let PL_PENDING = [];                 // 아직 서버에 반영되지 않은 변경 목록 (오래된 순)
+let PL_FLUSHING = null;              // 진행 중인 저장 작업
+let PL_LOADED = false;               // 서버에서 기록을 정상적으로 불러왔는가
+let PL_LOAD_FAILED = false;          // 불러오기에 실패했는가
+let PL_LOAD_ERR = '';
+let PL_FLUSH_FAILED = false;         // 마지막 저장 시도가 실패했는가
+let PL_FLUSH_ERR = '';
+let PL_RETRY_TIMER = null;
+
+function plClone(x){ return JSON.parse(JSON.stringify(x)); }
+function plBadData(msg){ const e = new Error(msg); e.code = 'bad-data'; return e; }
+
+function plWithTimeout(p, ms){
+  return new Promise(function(resolve, reject){
+    const t = setTimeout(function(){ const e = new Error('timeout'); e.code = 'timeout'; reject(e); }, ms);
+    p.then(function(v){ clearTimeout(t); resolve(v); }, function(e){ clearTimeout(t); reject(e); });
+  });
+}
+
+// 서버 문서 → {workouts, bodyLogs, settings}. 형식이 깨져 있으면 예외를 던져서 절대 덮어쓰지 않아요.
+function plParseList(str){
+  if(str==null || str==='') return [];
+  let v;
+  try{ v = JSON.parse(str); }catch(e){ throw plBadData('invalid json'); }
+  if(!Array.isArray(v)) throw plBadData('not an array');
+  return v;
+}
+function plParseDoc(d){
+  d = d || {};
+  const st = { workouts: plParseList(d.workoutsJson), bodyLogs: plParseList(d.bodyLogsJson), settings: Object.assign({}, PL_DEFAULT_SETTINGS) };
+  if(d.settingsJson){
+    try{
+      const s = JSON.parse(d.settingsJson);
+      if(s && typeof s==='object' && !Array.isArray(s)) Object.assign(st.settings, s);
+    }catch(e){}
+  }
+  return st;
+}
+
+// 변경 하나를 상태에 적용 (몇 번 적용해도 결과가 같도록 id/날짜 기준으로 처리)
+function plApplyOp(st, op){
+  if(op.t==='put'){
+    const i = st.workouts.findIndex(function(w){ return w && w.id===op.rec.id; });
+    if(i>-1) st.workouts[i] = plClone(op.rec); else st.workouts.push(plClone(op.rec));
+  } else if(op.t==='del'){
+    st.workouts = st.workouts.filter(function(w){ return !(w && w.id===op.id); });
+  } else if(op.t==='addMany'){
+    const have = {};
+    st.workouts.forEach(function(w){ if(w) have[w.id] = true; });
+    op.recs.forEach(function(r){ if(!have[r.id]){ st.workouts.push(plClone(r)); have[r.id] = true; } });
+  } else if(op.t==='delSamples'){
+    st.workouts = st.workouts.filter(function(w){ return !(w && w.sample); });
+  } else if(op.t==='putBody'){
+    const j = st.bodyLogs.findIndex(function(b){ return b && b.date===op.rec.date; });
+    if(j>-1) st.bodyLogs[j] = Object.assign(plClone(op.rec), { id: st.bodyLogs[j].id || op.rec.id });
+    else st.bodyLogs.push(plClone(op.rec));
+  } else if(op.t==='settings'){
+    st.settings = Object.assign({}, st.settings, op.value);
   }
 }
 
+function plValidOp(op){
+  if(!op || typeof op!=='object') return false;
+  const okRec = function(r){ return !!(r && typeof r==='object' && r.id && typeof r.date==='string'); };
+  if(op.t==='put') return okRec(op.rec);
+  if(op.t==='del') return typeof op.id==='string' && !!op.id;
+  if(op.t==='addMany') return Array.isArray(op.recs) && op.recs.every(okRec);
+  if(op.t==='delSamples') return true;
+  if(op.t==='putBody') return !!(op.rec && typeof op.rec==='object' && typeof op.rec.date==='string');
+  if(op.t==='settings') return !!(op.value && typeof op.value==='object');
+  return false;
+}
+
+// 저장 못 한 변경을 이 기기(브라우저)에 보관 → 앱을 닫았다 열어도 이어서 저장
+function plPendingKey(){ return 'pl-pending:'+PL_SYNC_CODE; }
+function plSavePending(){
+  if(!PL_SYNC_CODE) return;
+  try{
+    if(PL_PENDING.length) localStorage.setItem(plPendingKey(), JSON.stringify(PL_PENDING));
+    else localStorage.removeItem(plPendingKey());
+  }catch(e){}
+}
+function plLoadPending(){
+  try{
+    const raw = localStorage.getItem(plPendingKey());
+    if(!raw) return [];
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter(plValidOp) : [];
+  }catch(e){ return []; }
+}
+
+function plSetViewState(st){
+  PL_WORKOUTS = st.workouts;
+  PL_BODYLOGS = st.bodyLogs;
+  PL_SETTINGS = st.settings;
+}
+
+// 화면 = 서버의 최신 상태 + 아직 서버에 못 보낸 변경. 화면 내용이 바뀌었으면 true
+function plRebuildView(server){
+  const before = JSON.stringify([PL_WORKOUTS, PL_BODYLOGS, PL_SETTINGS]);
+  const st = { workouts: server.workouts.slice(), bodyLogs: server.bodyLogs.slice(), settings: Object.assign({}, server.settings) };
+  PL_PENDING.forEach(function(op){ plApplyOp(st, op); });
+  plSetViewState(st);
+  return JSON.stringify([PL_WORKOUTS, PL_BODYLOGS, PL_SETTINGS]) !== before;
+}
+
+function plRenderAll(){
+  plRenderHome();
+  plRenderHistory();
+  plRenderStats();
+}
+
+// 변경 하나를 화면에 바로 반영하고, 서버 저장은 이어서 진행. 저장이 끝나면 true/false로 알려줘요.
+function plCommit(op){
+  if(!PL_SYNC_CODE) return Promise.resolve(false);
+  PL_PENDING.push(op);
+  plSavePending();
+  const st = { workouts: PL_WORKOUTS, bodyLogs: PL_BODYLOGS, settings: PL_SETTINGS };
+  plApplyOp(st, op);
+  plSetViewState(st);
+  return plFlush();
+}
+
+// 서버의 최신 문서를 읽고 → 변경 목록을 그 위에 적용해서 → 저장 (한 번에 처리되는 트랜잭션)
+function plRunTransaction(ops){
+  const ref = plDb.collection('logs').doc(PL_SYNC_CODE);
+  return plWithTimeout(plDb.runTransaction(async function(tx){
+    const snap = await tx.get(ref);
+    const cur = snap.exists ? snap.data() : null;
+    const st = plParseDoc(cur);
+    ops.forEach(function(op){ plApplyOp(st, op); });
+    const out = {
+      workoutsJson: JSON.stringify(st.workouts),
+      bodyLogsJson: JSON.stringify(st.bodyLogs),
+      settingsJson: JSON.stringify(st.settings)
+    };
+    const prevLen = (cur && typeof cur.workoutsJson==='string') ? cur.workoutsJson.length : 0;
+    if(out.workoutsJson.length > PL_MAX_JSON && out.workoutsJson.length > prevLen){
+      const e = new Error('too big'); e.code = 'too-big'; throw e;
+    }
+    const data = { workoutsJson: out.workoutsJson, updatedAt: Date.now() };
+    if(ops.some(function(o){ return o.t==='putBody'; })) data.bodyLogsJson = out.bodyLogsJson;
+    if(ops.some(function(o){ return o.t==='settings'; })) data.settingsJson = out.settingsJson;
+    tx.set(ref, data, { merge:true });
+    return out;
+  }), PL_NET_TIMEOUT_MS);
+}
+
+async function plFlushLoop(){
+  const uid = PL_SYNC_CODE;
+  let changed = false;
+  try{
+    while(PL_PENDING.length){
+      if(PL_SYNC_CODE !== uid) return false;
+      const sent = PL_PENDING.slice();
+      const saved = await plRunTransaction(sent);
+      if(PL_SYNC_CODE !== uid) return false;
+      PL_PENDING = PL_PENDING.filter(function(op){ return sent.indexOf(op) < 0; });
+      plSavePending();
+      if(plRebuildView(plParseDoc(saved))) changed = true;
+      PL_LOADED = true;            // 방금 서버의 전체 기록을 읽어서 반영했으므로, 불러오기에 실패했었더라도 이제 정상
+      PL_LOAD_FAILED = false;
+    }
+    PL_FLUSH_FAILED = false;
+    PL_FLUSH_ERR = '';
+    return true;
+  }catch(e){
+    console.error('save failed', e);
+    PL_FLUSH_FAILED = true;
+    PL_FLUSH_ERR = (e && e.code) ? String(e.code) : 'unknown';
+    plScheduleRetry();
+    return false;
+  }finally{
+    plUpdateStorageBanner();
+    if(changed){ try{ plRenderAll(); }catch(e2){ console.error(e2); } }
+  }
+}
+
+// 저장을 시작(이미 진행 중이면 그 작업이 끝날 때까지 기다림). 항상 true/false로 끝나요.
+function plFlush(){
+  if(PL_FLUSHING) return PL_FLUSHING;
+  if(!PL_PENDING.length || !PL_SYNC_CODE) return Promise.resolve(PL_PENDING.length===0);
+  const p = plFlushLoop().then(function(ok){
+    if(PL_FLUSHING===p) PL_FLUSHING = null;
+    if(ok && PL_PENDING.length) return plFlush();   // 끝나는 사이에 쌓인 변경이 있으면 이어서 저장
+    return ok;
+  });
+  PL_FLUSHING = p;
+  return p;
+}
+
+// "지금 저장" 버튼
+async function plFlushNow(){
+  if(!PL_PENDING.length){ plUpdateStorageBanner(); return; }
+  plToast('저장하는 중…');
+  const ok = await plFlush();
+  plToast(ok ? '모두 저장했어요' : plFlushErrText());
+}
+
+function plScheduleRetry(){
+  if(PL_RETRY_TIMER) return;
+  if(PL_FLUSH_ERR==='too-big' || PL_FLUSH_ERR==='permission-denied' || PL_FLUSH_ERR==='bad-data') return; // 기다려도 해결되지 않는 오류
+  PL_RETRY_TIMER = setTimeout(function(){
+    PL_RETRY_TIMER = null;
+    if(PL_PENDING.length) plFlush();
+  }, 15000);
+}
+
+function plFlushErrText(){
+  const c = PL_FLUSH_ERR;
+  if(c==='too-big') return '저장 용량이 거의 찼어요. 설정에서 JSON으로 백업한 뒤 오래된 기록을 정리해주세요.';
+  if(c==='permission-denied' || c==='unauthenticated') return '저장 권한이 없어요. 로그아웃 후 다시 로그인해주세요.';
+  if(c==='bad-data') return '서버에 저장된 기록 형식을 읽지 못해서 저장을 멈췄어요.';
+  if(c==='timeout' || c==='unavailable' || c==='deadline-exceeded' || c==='failed-precondition' || c==='aborted') return '서버에 연결하지 못했어요. 인터넷 연결을 확인해주세요.';
+  return '서버에 저장하지 못했어요.';
+}
+
+// 화면 맨 위 안내줄: 불러오기 실패 / 저장 대기 중인 변경이 있을 때만 보여요
+function plUpdateStorageBanner(){
+  const el = document.getElementById('pl-storage-banner');
+  if(!el) return;
+  let html = '';
+  if(PL_LOAD_FAILED){
+    const why = (PL_LOAD_ERR==='bad-data') ? '서버에 저장된 기록의 형식이 올바르지 않아 불러오지 못했어요.' : '저장된 기록을 불러오지 못했어요. 인터넷 연결을 확인해주세요.';
+    html = '<span>'+why+' (서버의 기존 기록은 그대로예요)</span>'+
+      '<button type="button" class="banner-btn" onclick="plLoad()">다시 불러오기</button>';
+  } else if(PL_PENDING.length && PL_FLUSH_FAILED){
+    html = '<span>'+plFlushErrText()+' 아직 서버에 저장되지 않은 변경이 '+PL_PENDING.length+'건 있어요.</span>'+
+      '<button type="button" class="banner-btn" onclick="plFlushNow()">지금 저장</button>';
+  }
+  if(html){ el.innerHTML = html; el.style.display = 'block'; }
+  else { el.innerHTML = ''; el.style.display = 'none'; }
+}
+
+// 로그아웃·계정 변경·전체 삭제 때 이전 계정의 데이터가 메모리에 남지 않게 비움
+function plResetState(){
+  PL_WORKOUTS = [];
+  PL_BODYLOGS = [];
+  PL_SETTINGS = Object.assign({}, PL_DEFAULT_SETTINGS);
+  PL_PENDING = [];
+  PL_LOADED = false;
+  PL_LOAD_FAILED = false;
+  PL_LOAD_ERR = '';
+  PL_FLUSH_FAILED = false;
+  PL_FLUSH_ERR = '';
+  PL_EDIT_ID = null;
+  PL_EDIT_EST = null;
+  PL_LAST_DELETED_WORKOUT = null;
+  clearTimeout(PL_RETRY_TIMER);
+  PL_RETRY_TIMER = null;
+}
+
+// 로그아웃했을 때 화면에 남은 이전 내용을 지움
+function plClearScreens(){
+  plCloseDetail();
+  plCloseSettings();
+  plCloseBodyLog();
+  plResetForm();
+  plGoTab('today');
+  const topUser = document.getElementById('pl-topbar-user');
+  if(topUser) topUser.textContent = '건강 코치 앱';
+  const acct = document.getElementById('pl-account-info');
+  if(acct) acct.textContent = '';
+  plUpdateStorageBanner();
+  try{ plRenderAll(); }catch(e){ console.error(e); }
+}
+
+// 설정 화면: 저장 용량 / 예시 기록 지우기 버튼
+function plRenderUsageLine(){
+  const el = document.getElementById('pl-usage-line');
+  if(el){
+    const used = JSON.stringify(PL_WORKOUTS).length;
+    const pct = used/PL_MAX_JSON*100;
+    el.textContent = '저장 용량: 기록 '+PL_WORKOUTS.length+'개 · '+(pct<1 ? '1% 미만' : '약 '+Math.round(pct)+'%')+' 사용 중'+
+      (pct>=80 ? ' (곧 가득 차요. JSON으로 백업한 뒤 오래된 기록을 정리해주세요)' : '');
+  }
+  const btn = document.getElementById('pl-del-samples-btn');
+  if(btn) btn.style.display = PL_WORKOUTS.some(function(w){ return w.sample; }) ? 'block' : 'none';
+}
+
 let PL_EDIT_ID = null;
+let PL_FORM_ID = plUid();     // 입력 화면 하나에 고정된 기록 번호 (같은 화면에서 두 번 저장돼도 한 건만 생김)
+let PL_EDIT_EST = null;       // 수정 중인 기록의 '추정 칼로리'(손대지 않으면 다시 추정)
 
 function plGoTab(tab){
   document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
@@ -1095,8 +1442,19 @@ function plUpdateRpe(){
   document.getElementById('pl-rpe-val').textContent = document.getElementById('f-rpe').value;
 }
 
+function plSetKcalHint(est){
+  const el = document.getElementById('pl-kcal-hint');
+  if(!el) return;
+  el.textContent = est
+    ? '지금 칼로리는 추정값이에요. 그대로 두면 심박수·시간을 바꿀 때 다시 추정해요. 직접 입력하면 입력한 값이 저장돼요.'
+    : '칼로리를 비워 두면 심박수·나이·체중·성별로 추정해서 저장해요(추정 표시).';
+}
+
 function plResetForm(){
   PL_EDIT_ID = null;
+  PL_FORM_ID = plUid();
+  PL_EDIT_EST = null;
+  plSetKcalHint(null);
   document.getElementById('pl-add-title').textContent = '기록 추가';
   document.getElementById('pl-save-btn').textContent = '저장하기';
   document.getElementById('pl-cancel-edit-btn').style.display = 'none';
@@ -1150,6 +1508,8 @@ function plStartEdit(id){
   document.getElementById('f-maxhr').value = w.maxHr!=null ? w.maxHr : '';
   document.getElementById('f-kcalact').value = w.kcalActive!=null ? w.kcalActive : '';
   document.getElementById('f-kcaltotal').value = w.kcalTotal!=null ? w.kcalTotal : '';
+  PL_EDIT_EST = w.kcalEstimated ? { act: w.kcalActive, tot: w.kcalTotal } : null;
+  plSetKcalHint(PL_EDIT_EST);
   document.getElementById('f-distance').value = w.distance!=null ? w.distance : '';
   plUpdateSpeedDisplay();
   document.getElementById('f-rpe').value = w.rpe != null ? w.rpe : 5;
@@ -1175,39 +1535,56 @@ function plStartEdit(id){
 }
 
 async function plSaveWorkout(){
+  const err = document.getElementById('pl-form-error');
+  const showErr = function(m){ err.textContent = m; err.classList.add('show'); };
   const date = document.getElementById('f-date').value;
   const duration = parseFloat(document.getElementById('f-duration').value);
-  const err = document.getElementById('pl-form-error');
-  if(!plSelectedType || !date || !duration || duration<=0){
-    err.classList.add('show');
-    return;
-  }
+  if(!plSelectedType){ showErr('운동 종류를 선택해주세요.'); return; }
+  if(!date){ showErr('날짜를 입력해주세요.'); return; }
+  if(!duration || duration<=0){ showErr('시작/종료 시간을 입력해주세요.'); return; }
   err.classList.remove('show');
   const avgHr = parseFloat(document.getElementById('f-avghr').value);
   const maxHr = parseFloat(document.getElementById('f-maxhr').value);
   let kcalAct = parseFloat(document.getElementById('f-kcalact').value);
   let kcalTot = parseFloat(document.getElementById('f-kcaltotal').value);
-  const showErr = function(m){ err.textContent = m; err.classList.add('show'); };
+  const isHoop = (plSelectedType==='훌라후프');
+  const numOrNull = function(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
   if(date > plToday()){ showErr('미래 날짜는 기록할 수 없어요.'); return; }
   if(duration>600){ showErr('운동 시간이 10시간을 넘어요. 시작/종료 시간을 확인해주세요.'); return; }
   if(!isNaN(avgHr) && (avgHr<30 || avgHr>250)){ showErr('평균 심박수는 30~250 사이로 입력해주세요.'); return; }
   if(!isNaN(maxHr) && (maxHr<30 || maxHr>250)){ showErr('최고 심박수는 30~250 사이로 입력해주세요.'); return; }
   if(!isNaN(avgHr) && !isNaN(maxHr) && maxHr<avgHr){ showErr('최고 심박수가 평균 심박수보다 낮을 수 없어요.'); return; }
+  if((!isNaN(kcalAct) && (kcalAct<0 || kcalAct>20000)) || (!isNaN(kcalTot) && (kcalTot<0 || kcalTot>20000))){ showErr('칼로리는 0~20000 사이로 입력해주세요.'); return; }
+  if(!isNaN(kcalAct) && !isNaN(kcalTot) && kcalTot<kcalAct){ showErr('총 칼로리는 활동 칼로리보다 작을 수 없어요.'); return; }
+  const hoopKg = isHoop ? numOrNull('f-hoop-kg') : null;
+  const hoopCm = isHoop ? numOrNull('f-hoop-cm') : null;
+  const hoopStreak = isHoop ? numOrNull('f-hoop-streak') : null;
+  const hoopDrops = isHoop ? numOrNull('f-hoop-drops') : null;
+  if(hoopKg!=null && (hoopKg<0.1 || hoopKg>10)){ showErr('후프 무게는 0.1~10kg 사이로 입력해주세요.'); return; }
+  if(hoopCm!=null && (hoopCm<30 || hoopCm>200)){ showErr('후프 지름은 30~200cm 사이로 입력해주세요.'); return; }
+  if(hoopStreak!=null && hoopStreak<0){ showErr('최장 연속 시간은 0 이상으로 입력해주세요.'); return; }
+  if(hoopStreak!=null && hoopStreak>duration+0.01){ showErr('최장 연속 시간이 운동 시간보다 길 수 없어요.'); return; }
+  if(hoopDrops!=null && (hoopDrops<0 || hoopDrops>999 || Math.floor(hoopDrops)!==hoopDrops)){ showErr('떨어뜨린 횟수는 0~999 사이의 정수로 입력해주세요.'); return; }
+  const painVal = document.getElementById('f-hoop-pain').value;
+  const distance = isHoop ? NaN : parseFloat(document.getElementById('f-distance').value);
+  if(!isNaN(distance) && (distance<0 || distance>500)){ showErr('거리는 0~500km 사이로 입력해주세요.'); return; }
+  const speed = (!isNaN(distance) && duration>0) ? (distance/(duration/60)) : NaN;
+
+  // 수정 화면에서 '추정 칼로리'를 손대지 않았다면 비우고 지금 값으로 다시 추정
+  let keptEst = null;
+  if(PL_EDIT_EST && kcalAct===PL_EDIT_EST.act && kcalTot===PL_EDIT_EST.tot){
+    keptEst = PL_EDIT_EST;
+    kcalAct = NaN; kcalTot = NaN;
+  }
   let kcalEstimated = false;
   if(isNaN(kcalAct) && isNaN(kcalTot) && !isNaN(avgHr)){
     const est = plEstimateKcal(avgHr, duration);
     if(est){ kcalAct = est.active; kcalTot = est.total; kcalEstimated = true; }
+    else if(keptEst){ kcalAct = keptEst.act; kcalTot = keptEst.tot; kcalEstimated = true; } // 다시 추정할 정보가 없으면 기존 추정값 유지
   }
-  const isHoop = (plSelectedType==='훌라후프');
-  const numOrNull = function(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
-  const hoopStreak = isHoop ? numOrNull('f-hoop-streak') : null;
-  if(hoopStreak!=null && hoopStreak>duration+0.01){ showErr('최장 연속 시간이 운동 시간보다 길 수 없어요.'); return; }
-  const painVal = document.getElementById('f-hoop-pain').value;
-  const distance = isHoop ? NaN : parseFloat(document.getElementById('f-distance').value);
-  const speed = (!isNaN(distance) && duration>0) ? (distance/(duration/60)) : NaN;
 
   let existingZones = [0,0,0,0,0];
-  let idToUse = plUid();
+  let idToUse = PL_FORM_ID;
   let existingIndex = -1;
   if(PL_EDIT_ID){
     existingIndex = PL_WORKOUTS.findIndex(function(w){ return w.id===PL_EDIT_ID; });
@@ -1215,6 +1592,9 @@ async function plSaveWorkout(){
       existingZones = PL_WORKOUTS[existingIndex].zones || [0,0,0,0,0];
       idToUse = PL_EDIT_ID;
     }
+  } else {
+    // 같은 입력 화면에서 이미 저장된 기록이면 새로 만들지 않고 그 기록을 갱신 (중복 저장 방지)
+    existingIndex = PL_WORKOUTS.findIndex(function(w){ return w.id===PL_FORM_ID; });
   }
 
   const w = {
@@ -1235,16 +1615,16 @@ async function plSaveWorkout(){
     memo: document.getElementById('f-memo').value.trim(),
     hadWarmup: document.getElementById('f-warmup').checked,
     kcalEstimated: kcalEstimated,
-    hoopKg: isHoop ? numOrNull('f-hoop-kg') : null,
-    hoopCm: isHoop ? numOrNull('f-hoop-cm') : null,
+    hoopKg: hoopKg,
+    hoopCm: hoopCm,
     hoopDir: isHoop ? (document.getElementById('f-hoop-dir').value || null) : null,
     maxStreakMin: hoopStreak,
-    drops: isHoop ? numOrNull('f-hoop-drops') : null,
+    drops: hoopDrops,
     discomfort: (isHoop && painVal!=='') ? parseInt(painVal,10) : null
   };
 
   const prMessages = [];
-  if(existingIndex===-1){
+  if(PL_LOADED && existingIndex===-1){
     const sameType = PL_WORKOUTS.filter(function(o){ return o.type===plSelectedType; });
     if(sameType.length>0){
       const maxDur = Math.max.apply(null, sameType.map(function(o){ return o.duration; }));
@@ -1282,39 +1662,26 @@ async function plSaveWorkout(){
     }
   }
 
-  if(existingIndex>-1){
-    PL_WORKOUTS[existingIndex] = w;
-  } else {
-    PL_WORKOUTS.push(w);
-  }
+  // 화면에는 바로 반영하고(입력 화면 정리 → 기록장으로 이동), 서버 저장은 이어서 진행
   const wasEdit = !!PL_EDIT_ID;
-  const ok = await plPersist();
-  let msg = ok ? (wasEdit?'수정했어요':'저장했어요') + (w.kcalEstimated?' (칼로리는 추정값)':'') : '저장 실패 - 이 화면을 벗어나면 기록이 사라질 수 있어요';
+  const flushP = plCommit({ t:'put', rec:w });
+  plResetForm();
+  plGoTab('history');
+  plRenderHome();
+  plRenderHistory();
+  plRenderStats();
+  plToast('저장하는 중…');
+
+  const ok = await flushP;
+  let msg = ok ? (wasEdit?'수정했어요':'저장했어요') + (w.kcalEstimated?' (칼로리는 추정값)':'') : '아직 서버에 저장되지 않았어요. 연결되면 자동으로 저장해요';
   if(w.discomfort===2){ msg += ' · 허리·갈비뼈 불편이 심하면 쉬고 전문가와 상담하세요'; }
   if(ok && prMessages.length>0){ msg += ' · 🏆 '+prMessages.join(', ')+' 신기록!'; }
   if(ok){
     plToast(msg);
   } else {
-    plToastWithAction(msg, '재시도', plRetrySaveWorkout, 6000);
+    plToastWithAction(msg, '지금 저장', plFlushNow, 6000);
   }
   if(ok && anomalyNote){ setTimeout(function(){ plToast(anomalyNote); }, 2000); }
-  plRenderHome();
-  plRenderHistory();
-  plRenderStats();
-  plResetForm();
-  plGoTab('history');
-}
-
-async function plRetrySaveWorkout(){
-  const ok = await plPersist();
-  if(ok){
-    plToast('저장했어요');
-    plRenderHome();
-    plRenderHistory();
-    plRenderStats();
-  } else {
-    plToastWithAction('저장 실패 - 이 화면을 벗어나면 기록이 사라질 수 있어요', '재시도', plRetrySaveWorkout, 6000);
-  }
 }
 
 let plToastTimer = null;
@@ -1403,15 +1770,22 @@ function plLatestWorkout(){
   return sorted[0];
 }
 
+// 같은 종류의 운동끼리만 평균 심박수 범위를 비교해요 (종류마다 심박수 수준이 달라서 섞으면 강도가 왜곡돼요)
+function plHrRangeFor(type){
+  const hrs = PL_WORKOUTS.filter(function(w){ return w.type===type && w.avgHr!=null; }).map(function(w){ return w.avgHr; });
+  if(hrs.length < 2) return null;
+  const mn = Math.min.apply(null, hrs), mx = Math.max.apply(null, hrs);
+  return { mn: mn, mx: mx, range: (mx - mn) || 1 };
+}
+
 function plIntensityInfo(w){
-  if(w.avgHr == null) return { label:'', emoji:'\uD83C\uDF3F', color:'var(--green)', frac:0.5 };
-  const allHr = PL_WORKOUTS.map(function(x){ return x.avgHr; }).filter(function(v){ return v!=null; });
-  if(allHr.length < 2) return { label:'', emoji:'\uD83D\uDCAA', color:'var(--green)', frac:0.6 };
-  const mn = Math.min.apply(null, allHr), mx = Math.max.apply(null, allHr);
-  const pos = (w.avgHr - mn) / ((mx - mn) || 1);
-  if(pos > 0.66) return { label:'강도 높음', emoji:'\uD83D\uDD25', color:'var(--red)', frac:0.9 };
-  if(pos > 0.33) return { label:'강도 보통', emoji:'\uD83D\uDCAA', color:'var(--amber)', frac:0.65 };
-  return { label:'강도 낮음', emoji:'\uD83C\uDF3F', color:'var(--green)', frac:0.4 };
+  if(w.avgHr == null) return { label:'', emoji:'🌿', color:'var(--green)', frac:0.5 };
+  const r = plHrRangeFor(w.type);
+  if(!r) return { label:'', emoji:'💪', color:'var(--green)', frac:0.6 };
+  const pos = (w.avgHr - r.mn) / r.range;
+  if(pos > 0.66) return { label:'강도 높음', emoji:'🔥', color:'var(--red)', frac:0.9 };
+  if(pos > 0.33) return { label:'강도 보통', emoji:'💪', color:'var(--amber)', frac:0.65 };
+  return { label:'강도 낮음', emoji:'🌿', color:'var(--green)', frac:0.4 };
 }
 
 function plIntensityLabel(w){ return plIntensityInfo(w).label; }
@@ -1430,7 +1804,7 @@ function plRenderHero(){
       '<div class="hero-title">첫 기록을 남겨보세요 \uD83C\uDFC3</div>'+
       '<div class="hero-meta"><span class="hero-meta-item">운동을 마치면 시간과 심박수를 적어보세요</span></div>'+
       '</div></div>'+
-      '<button class="btn-secondary" onclick="plSeedWeek()">예시 일주일치 채워보기</button>';
+      (PL_LOADED ? '<button class="btn-secondary" onclick="plSeedWeek()">예시 일주일치 채워보기</button>' : '');
     return;
   }
 
@@ -1452,7 +1826,7 @@ function plRenderHero(){
     '</div>'+
     '<div class="hero-info">'+
       '<div class="hero-date">'+dateStr+(isToday?'':' \u00B7 최근 기록')+'</div>'+
-      '<div class="hero-title">'+w.type+' '+w.duration.toFixed(0)+'분 '+info.emoji+'</div>'+
+      '<div class="hero-title">'+plEsc(w.type)+' '+w.duration.toFixed(0)+'분 '+info.emoji+'</div>'+
       '<div class="hero-meta">'+
         (w.distance!=null?'<span class="hero-meta-item">\uD83D\uDCCD '+w.distance.toFixed(1)+'km</span>':'')+
         (w.hoopKg!=null?'<span class="hero-meta-item">\uD83C\uDF00 '+w.hoopKg+'kg</span>':'')+
@@ -1472,14 +1846,14 @@ function plRenderCards(){
   const delta = (avgPrev && avgLast) ? Math.round(avgLast-avgPrev) : null;
 
   const today = new Date();
-  const weekStart = new Date(today); weekStart.setDate(today.getDate()-6);
+  const weekStart = plDaysAgo(6);
   const weekTotal = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=weekStart; })
     .reduce(function(a,w){ return a+w.duration; },0);
   const monthCount = PL_WORKOUTS.filter(function(w){
     const d = plFromISO(w.date);
     return d.getMonth()===today.getMonth() && d.getFullYear()===today.getFullYear();
   }).length;
-  const monthAgo = new Date(today); monthAgo.setDate(today.getDate()-29);
+  const monthAgo = plDaysAgo(29);
   const streakList = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=monthAgo && w.maxStreakMin!=null; }).map(function(w){ return w.maxStreakMin; });
   const bestStreak = streakList.length ? Math.max.apply(null, streakList) : null;
 
@@ -1529,7 +1903,7 @@ function plRenderGoal(){
   const streak = plComputeStreak();
 
   const today = new Date();
-  const weekStart = new Date(today); weekStart.setDate(today.getDate()-6);
+  const weekStart = plDaysAgo(6);
   const weekTotal = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=weekStart; })
     .reduce(function(a,w){ return a+w.duration; },0);
   const weekPct = Math.min(100, (weekTotal/PL_SETTINGS.weeklyGoalMin*100));
@@ -1591,6 +1965,7 @@ function plOpenSettings(){
   try{ darkOn = localStorage.getItem('pl-dark-mode') === '1'; }catch(e){}
   document.getElementById('s-dark-mode').checked = darkOn;
   plRenderDeleteAccountButton();
+  plRenderUsageLine();
   document.getElementById('pl-settings-overlay').classList.add('open');
 }
 
@@ -1622,31 +1997,39 @@ async function plSaveSettings(){
   const weekly = parseFloat(document.getElementById('s-weekly-min').value);
   const monthMin = parseFloat(document.getElementById('s-monthly-min').value);
   const gender = document.getElementById('s-gender').value;
-  PL_SETTINGS = {
-    dailyGoal: (!isNaN(daily) && daily>0) ? daily : PL_SETTINGS.dailyGoal,
-    monthlyGoalDays: (!isNaN(monthDays) && monthDays>0) ? monthDays : PL_SETTINGS.monthlyGoalDays,
-    weeklyGoalMin: (!isNaN(weekly) && weekly>0) ? weekly : PL_SETTINGS.weeklyGoalMin,
-    monthlyGoalKm: PL_SETTINGS.monthlyGoalKm,
-    monthlyGoalMin: (!isNaN(monthMin) && monthMin>0) ? monthMin : (PL_SETTINGS.monthlyGoalMin||600),
+  if(!isNaN(height) && (height<50 || height>250)){ plToast('키는 50~250cm 사이로 입력해주세요'); return; }
+  if(!isNaN(age) && (age<5 || age>120)){ plToast('나이는 5~120 사이로 입력해주세요'); return; }
+  if(!isNaN(daily) && (daily<1 || daily>1440)){ plToast('일일 목표는 1~1440분 사이로 입력해주세요'); return; }
+  if(!isNaN(monthDays) && (monthDays<1 || monthDays>31)){ plToast('월간 목표(일)는 1~31 사이로 입력해주세요'); return; }
+  if(!isNaN(weekly) && (weekly<1 || weekly>10080)){ plToast('주간 목표는 1~10080분 사이로 입력해주세요'); return; }
+  if(!isNaN(monthMin) && (monthMin<1 || monthMin>44640)){ plToast('월간 운동 시간 목표는 1~44640분 사이로 입력해주세요'); return; }
+  const cur = PL_SETTINGS;
+  const value = {
+    dailyGoal: !isNaN(daily) ? daily : cur.dailyGoal,
+    monthlyGoalDays: !isNaN(monthDays) ? monthDays : cur.monthlyGoalDays,
+    weeklyGoalMin: !isNaN(weekly) ? weekly : cur.weeklyGoalMin,
+    monthlyGoalKm: cur.monthlyGoalKm,
+    monthlyGoalMin: !isNaN(monthMin) ? monthMin : (cur.monthlyGoalMin||600),
     gender: (gender==='M'||gender==='F') ? gender : null,
-    heightCm: (!isNaN(height) && height>0) ? height : null,
-    age: (!isNaN(age) && age>0) ? age : null
+    heightCm: !isNaN(height) ? height : null,
+    age: !isNaN(age) ? age : null
   };
-  try{
-    await plDb.collection('logs').doc(PL_SYNC_CODE).set({
-      settingsJson: JSON.stringify(PL_SETTINGS),
-      workoutsJson: JSON.stringify(PL_WORKOUTS)
-    }, { merge:true });
-  }catch(e){ console.error('settings save failed', e); }
+  const flushP = plCommit({ t:'settings', value:value });
   plCloseSettings();
   plRenderHome();
   plRenderStats();
-  plToast('목표를 저장했어요');
+  plToast('저장하는 중…');
+  const ok = await flushP;
+  if(ok){
+    plToast('목표를 저장했어요');
+  } else {
+    plToastWithAction('아직 서버에 저장되지 않았어요. 연결되면 자동으로 저장해요', '지금 저장', plFlushNow, 6000);
+  }
 }
 
 async function plShareWeekImage(){
   const today = new Date();
-  const weekStart = new Date(today); weekStart.setDate(today.getDate()-6);
+  const weekStart = plDaysAgo(6);
   const weekWorkouts = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=weekStart; });
   const weekTotal = weekWorkouts.reduce(function(a,w){ return a+w.duration; },0);
   const hrList = weekWorkouts.map(function(w){ return w.avgHr; }).filter(Boolean);
@@ -1718,8 +2101,8 @@ function plRenderRecoveryWarning(){
     const rpeList = recent7.map(function(w){ return w.rpe; }).filter(function(v){ return v!=null; });
     const avgRpe = rpeList.length ? plAvg(rpeList) : null;
 
-    const cutoffNow = new Date(); cutoffNow.setDate(cutoffNow.getDate()-6);
-    const cutoffPrev = new Date(); cutoffPrev.setDate(cutoffPrev.getDate()-13);
+    const cutoffNow = plDaysAgo(6);
+    const cutoffPrev = plDaysAgo(13);
     const hrNow = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=cutoffNow; }).map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
     const hrPrev = PL_WORKOUTS.filter(function(w){ const d=plFromISO(w.date); return d>=cutoffPrev && d<cutoffNow; }).map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
     const hrRising = (hrNow.length>=2 && hrPrev.length>=2) ? (plAvg(hrNow) - plAvg(hrPrev) >= 4) : false;
@@ -1737,7 +2120,7 @@ function plRenderRecoveryWarning(){
 
   if(PL_WORKOUTS.length>0){
     const lastDate = PL_WORKOUTS.slice().sort(function(a,b){ return b.date.localeCompare(a.date); })[0].date;
-    const idleDays = Math.floor((plFromISO(plToday()) - plFromISO(lastDate)) / 86400000);
+    const idleDays = Math.round((plFromISO(plToday()) - plFromISO(lastDate)) / 86400000);
     if(idleDays >= 3){
       wrap.innerHTML = '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:12px;font-size:13px;line-height:1.6;color:var(--text-dim);">'+
         '🌱 <b>'+idleDays+'일째 쉬고 있어요.</b> 부담 없이 짧게라도 오늘 다시 시작해볼까요?'+
@@ -1868,45 +2251,35 @@ async function plSaveBodyLog(){
     plToast('날짜와 몸무게를 입력해주세요');
     return;
   }
-  const existingIndex = PL_BODYLOGS.findIndex(function(b){ return b.date===date; });
-  const entry = { id: existingIndex>-1 ? PL_BODYLOGS[existingIndex].id : plUid(), date: date, weight: weight, restingHr: restingHr, waist: waist };
-  if(existingIndex>-1){ PL_BODYLOGS[existingIndex] = entry; } else { PL_BODYLOGS.push(entry); }
-  try{
-    await plDb.collection('logs').doc(PL_SYNC_CODE).set({
-      bodyLogsJson: JSON.stringify(PL_BODYLOGS),
-      workoutsJson: JSON.stringify(PL_WORKOUTS)
-    }, { merge:true });
-    plToast('몸무게를 기록했어요');
-  }catch(e){
-    console.error('body log save failed', e);
-    plToastWithAction('저장에 실패했어요', '재시도', plRetrySaveBodyLog, 6000);
-  }
+  if(date > plToday()){ plToast('미래 날짜는 기록할 수 없어요'); return; }
+  if(weight<20 || weight>300){ plToast('몸무게는 20~300kg 사이로 입력해주세요'); return; }
+  if(restingHr!=null && (restingHr<25 || restingHr>220)){ plToast('안정시 심박수는 25~220 사이로 입력해주세요'); return; }
+  if(waist!=null && (waist<30 || waist>250)){ plToast('허리둘레는 30~250cm 사이로 입력해주세요'); return; }
+  const existing = PL_BODYLOGS.find(function(b){ return b.date===date; });
+  const entry = { id: existing ? existing.id : plUid(), date: date, weight: weight, restingHr: restingHr, waist: waist };
+  const flushP = plCommit({ t:'putBody', rec:entry });
   plCloseBodyLog();
   plRenderHome();
   plRenderStats();
-}
-
-async function plRetrySaveBodyLog(){
-  try{
-    await plDb.collection('logs').doc(PL_SYNC_CODE).set({
-      bodyLogsJson: JSON.stringify(PL_BODYLOGS),
-      workoutsJson: JSON.stringify(PL_WORKOUTS)
-    }, { merge:true });
+  plToast('저장하는 중…');
+  const ok = await flushP;
+  if(ok){
     plToast('몸무게를 기록했어요');
-    plRenderHome();
-    plRenderStats();
-  }catch(e){
-    console.error('retry body log save failed', e);
-    plToastWithAction('저장에 실패했어요', '재시도', plRetrySaveBodyLog, 6000);
+  } else {
+    plToastWithAction('아직 서버에 저장되지 않았어요. 연결되면 자동으로 저장해요', '지금 저장', plFlushNow, 6000);
   }
 }
 
 function plRenderHistory(){
   const wrap = document.getElementById('pl-history-list');
   if(PL_WORKOUTS.length===0){
-    wrap.innerHTML = '<div class="empty"><div class="empty-emoji">\uD83D\uDCD3</div>'+
-      '<div class="empty-ttl">기록이 없어요</div>'+
-      '<div class="empty-desc">운동을 마치면 바로 기록해보세요.</div></div>';
+    wrap.innerHTML = PL_LOAD_FAILED
+      ? '<div class="empty"><div class="empty-emoji">\uD83D\uDCE1</div>'+
+        '<div class="empty-ttl">기록을 불러오지 못했어요</div>'+
+        '<div class="empty-desc">저장된 기록은 사라지지 않았어요.<br>화면 맨 위의 ‘다시 불러오기’ 버튼을 눌러주세요.</div></div>'
+      : '<div class="empty"><div class="empty-emoji">\uD83D\uDCD3</div>'+
+        '<div class="empty-ttl">기록이 없어요</div>'+
+        '<div class="empty-desc">운동을 마치면 바로 기록해보세요.</div></div>';
     return;
   }
   const filtered = plGetFilteredWorkouts();
@@ -1926,11 +2299,14 @@ function plRenderHistory(){
     if(typeCount[t] > maxCnt){ maxCnt = typeCount[t]; mainType = t; }
   });
 
-  // 본인 심박수 범위 (강도 상대평가용, 필터와 무관하게 전체 기록 기준 유지)
-  const allHr = PL_WORKOUTS.map(function(w){ return w.avgHr; }).filter(function(v){ return v!=null; });
-  const hrMin = allHr.length ? Math.min.apply(null, allHr) : 0;
-  const hrMax = allHr.length ? Math.max.apply(null, allHr) : 0;
-  const hrRange = (hrMax - hrMin) || 1;
+  // 본인 심박수 범위 (강도 상대평가용). 같은 종류의 운동끼리만 비교하고, 필터와 무관하게 전체 기록 기준으로 계산
+  const rangeCache = {};
+  const posOf = function(w){
+    if(w.avgHr==null) return null;
+    if(!(w.type in rangeCache)) rangeCache[w.type] = plHrRangeFor(w.type);
+    const r = rangeCache[w.type];
+    return r ? (w.avgHr - r.mn) / r.range : null;
+  };
 
   // 시간순(오름차순)으로 직전 회차 심박수 매핑 (전체 기록 기준 - 필터와 무관하게 실제 직전 운동과 비교)
   const asc = PL_WORKOUTS.slice().sort(function(a,b){
@@ -1979,8 +2355,8 @@ function plRenderHistory(){
     // 이번 달 강도별(색깔별) 통계
     let csLow=0, csMid=0, csHigh=0;
     mo.items.forEach(function(w){
-      if(w.avgHr==null || allHr.length<2){ csLow++; return; }
-      const pos = (w.avgHr - hrMin) / hrRange;
+      const pos = posOf(w);
+      if(pos==null){ csLow++; return; }
       if(pos>0.66) csHigh++; else if(pos>0.33) csMid++; else csLow++;
     });
     const csTotal = (csLow+csMid+csHigh) || 1;
@@ -2023,7 +2399,7 @@ function plRenderHistory(){
       });
       const wdur = items.reduce(function(a,w){ return a+w.duration; },0);
       const blockId = 'wk-block-'+key+'-'+wk;
-      const isOpen = wi===0; // 가장 최근 주차만 기본으로 펼쳐둠
+      const isOpen = (mi===0 && wi===0); // 가장 최근 달의 가장 최근 주차만 기본으로 펼쳐둠
       html += '<div class="wk-sum" onclick="plToggleWeek(\''+blockId+'\')" style="cursor:pointer;">'+
         '<span class="wk-sum-lbl">'+wk+'주차</span>'+
         '<span class="wk-sum-line"></span>'+
@@ -2047,12 +2423,12 @@ function plRenderHistory(){
         }
         // 막대 색상: 내 심박수 범위 안에서의 상대 강도
         let barColor = 'var(--green)';
-        if(w.avgHr != null && allHr.length > 1){
-          const pos = (w.avgHr - hrMin) / hrRange;
+        const pos = posOf(w);
+        if(pos != null){
           barColor = pos > 0.66 ? 'var(--red)' : (pos > 0.33 ? 'var(--amber)' : 'var(--green)');
         }
         const barPct = Math.max(4, (w.duration/maxDur*100));
-        const typeTag = (w.type !== mainType) ? '<span class="h-row-tag">'+w.type+'</span>' : '';
+        const typeTag = (w.type !== mainType) ? '<span class="h-row-tag">'+plEsc(w.type)+'</span>' : '';
 
         html += '<div class="h-row" onclick="plOpenDetail(\''+w.id+'\')">'+
           '<div class="h-row-top">'+
@@ -2099,7 +2475,7 @@ function plOpenDetail(id){
     '<div class="detail-ring-wrap">'+ring+
     '<div class="detail-ring-center"><div class="detail-ring-num">'+(w.avgHr?Math.round(w.avgHr):'--')+
     '<span style="font-size:12px;color:var(--text-dim);"> bpm</span></div><div style="font-size:12px;color:var(--text-dim);margin-top:2px;">'+w.duration.toFixed(1)+'분</div></div></div>'+
-    '<div style="text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:14px;">'+w.date+' · '+w.type+(w.startTime&&w.endTime?' · '+w.startTime.slice(0,5)+' ~ '+w.endTime.slice(0,5):'')+(plIntensityLabel(w)?' · '+plIntensityLabel(w):'')+(w.hadWarmup?' · 🧘 워밍업/쿨다운':'')+'</div>'+
+    '<div style="text-align:center;font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:14px;">'+w.date+' · '+plEsc(w.type)+(w.startTime&&w.endTime?' · '+w.startTime.slice(0,5)+' ~ '+w.endTime.slice(0,5):'')+(plIntensityLabel(w)?' · '+plIntensityLabel(w):'')+(w.hadWarmup?' · 🧘 워밍업/쿨다운':'')+'</div>'+
     '<div class="detail-grid">'+
     '<div class="detail-cell"><div class="detail-cell-lbl">최고 심박수</div><div class="detail-cell-val">'+(w.maxHr?Math.round(w.maxHr):'-')+'</div>'+
       (w.maxHr && theoMaxHr ? '<div style="font-size:10px;color:var(--text-faint);margin-top:2px;">이론적 최대('+theoMaxHr+') 대비 '+Math.round(w.maxHr/theoMaxHr*100)+'%</div>' : '')+
@@ -2144,28 +2520,15 @@ async function plDeleteWorkout(id){
   const removed = PL_WORKOUTS.find(function(w){ return w.id===id; });
   if(!removed) return;
   PL_LAST_DELETED_WORKOUT = removed;
-  PL_WORKOUTS = PL_WORKOUTS.filter(function(w){ return w.id!==id; });
-  const ok = await plPersist();
+  const flushP = plCommit({ t:'del', id:id });
   plCloseDetail();
   plRenderHome();
   plRenderHistory();
   plRenderStats();
-  if(ok){
-    plToastWithAction('삭제했어요', '되돌리기', plUndoDeleteWorkout, 5000);
-  } else {
-    plToastWithAction('삭제 실패 - 저장소에 연결되지 않았어요', '재시도', plRetryDeleteWorkout, 6000);
-  }
-}
-
-async function plRetryDeleteWorkout(){
-  const ok = await plPersist();
-  plRenderHome();
-  plRenderHistory();
-  plRenderStats();
-  if(ok){
-    plToastWithAction('삭제했어요', '되돌리기', plUndoDeleteWorkout, 5000);
-  } else {
-    plToastWithAction('삭제 실패 - 저장소에 연결되지 않았어요', '재시도', plRetryDeleteWorkout, 6000);
+  plToastWithAction('삭제했어요', '되돌리기', plUndoDeleteWorkout, 5000);
+  const ok = await flushP;
+  if(!ok){
+    plToastWithAction('삭제가 서버에 아직 반영되지 않았어요. 연결되면 자동으로 저장해요', '지금 저장', plFlushNow, 6000);
   }
 }
 
@@ -2173,12 +2536,15 @@ async function plUndoDeleteWorkout(){
   if(!PL_LAST_DELETED_WORKOUT) return;
   const restored = PL_LAST_DELETED_WORKOUT;
   PL_LAST_DELETED_WORKOUT = null;
-  PL_WORKOUTS.push(restored);
+  const flushP = plCommit({ t:'put', rec:restored });
   plRenderHome();
   plRenderHistory();
   plRenderStats();
-  const ok = await plPersist();
-  plToast(ok ? '복구했어요' : '복구 실패 - 다시 삭제 후 되돌리기를 시도해주세요');
+  plToast('복구했어요');
+  const ok = await flushP;
+  if(!ok){
+    plToastWithAction('복구가 서버에 아직 반영되지 않았어요. 연결되면 자동으로 저장해요', '지금 저장', plFlushNow, 6000);
+  }
 }
 
 function plCloseDetail(){
@@ -2197,7 +2563,7 @@ function plRenderStats(){
   const today = new Date();
   let filtered;
   if(plCurrentPeriod==='week'){
-    const start = new Date(today); start.setDate(today.getDate()-6);
+    const start = plDaysAgo(6);
     filtered = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date)>=start; });
   } else {
     filtered = PL_WORKOUTS.filter(function(w){
@@ -2301,7 +2667,7 @@ function plRenderHeatmapHTML(){
   return '<div class="heat-grid">'+cells+'</div>'+
     '<div class="heat-legend"><span class="heat-legend-box" style="background:var(--surface)"></span>없음'+
     '<span class="heat-legend-box" style="background:rgba(242,167,27,0.5);margin-left:8px;"></span>보통'+
-    '<span class="heat-legend-box" style="background:rgba(242,167,27,1);margin-left:8px;"></span>많이 탐</div>';
+    '<span class="heat-legend-box" style="background:rgba(242,167,27,1);margin-left:8px;"></span>많이 함</div>';
 }
 
 function plRenderAiCoachSection(){
@@ -2364,7 +2730,7 @@ async function plGenerateAiCoaching(){
     const data = await response.json();
     const text = (data.content||[]).map(function(c){ return c.text||''; }).join('').trim();
     resultEl.innerHTML = '<div class="hero" style="display:block;">'+
-      '<div class="coach-msg">✨ '+text+'</div>'+
+      '<div class="coach-msg">✨ '+plEsc(text)+'</div>'+
       '<div style="font-family:var(--f-mono);font-size:10px;color:var(--text-faint);margin-top:12px;">AI가 생성한 문장이며, 의료적 진단이나 전문가 상담을 대신하지 않아요.</div>'+
     '</div>';
   }catch(e){
@@ -2375,7 +2741,7 @@ async function plGenerateAiCoaching(){
 
 function plRenderCoachFeedback(){
   const wrap = document.getElementById('pl-coach-feedback');
-  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-13);
+  const cutoff = plDaysAgo(13);
   const recent = PL_WORKOUTS.filter(function(w){ return plFromISO(w.date) >= cutoff; })
     .sort(function(a,b){ return a.date.localeCompare(b.date); });
 
@@ -2696,7 +3062,7 @@ function plRenderOverloadChart(){
   const today = new Date();
   const weeks = [];
   for(let i=7;i>=0;i--){
-    const end = new Date(today); end.setDate(today.getDate()-i*7);
+    const end = plDaysAgo(i*7);
     const start = new Date(end); start.setDate(end.getDate()-6);
     weeks.push({ start:start, end:end });
   }
@@ -2782,14 +3148,22 @@ function plInit(){
 
   firebase.auth().onAuthStateChanged(function(user){
     if(user){
+      plResetState();                 // 이전 계정의 데이터가 섞이지 않도록 먼저 비움
       PL_SYNC_CODE = user.uid;
       document.getElementById('login-screen').classList.add('hide');
       plLoad();
     } else {
       PL_SYNC_CODE = null;
-      PL_WORKOUTS = [];
+      plResetState();
+      plClearScreens();
       document.getElementById('login-screen').classList.remove('hide');
     }
+  });
+
+  // 연결이 돌아오거나 앱을 다시 열었을 때, 저장 못 한 변경이 있으면 바로 다시 저장
+  window.addEventListener('online', function(){ if(PL_PENDING.length) plFlush(); });
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='visible' && PL_PENDING.length && !PL_FLUSHING) plFlush();
   });
 }
 
@@ -2797,7 +3171,17 @@ plInit();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      // 새 버전이 설치되면 알려줘요 (다시 열면 최신 화면으로 바뀜)
+      reg.addEventListener('updatefound', function(){
+        const nw = reg.installing;
+        if(!nw || !hadController) return;
+        nw.addEventListener('statechange', function(){
+          if(nw.state==='activated'){ plToast('새 버전이 준비됐어요. 앱을 닫았다가 다시 열면 적용돼요.'); }
+        });
+      });
+    }).catch(function(){});
   });
 }
 
