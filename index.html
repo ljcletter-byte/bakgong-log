@@ -3091,8 +3091,8 @@ function plUpdateWhtrPreview(){
 
 
 /* ===============================================================
-   체중 가져오기 — 아이폰 '건강' 앱에서 내보낸 파일(export.zip / export.xml) 또는 붙여 넣은 목록
-   - 건강 앱 파일에서 '체중(BodyMass)' 기록만 골라, 날짜마다 그날 첫 측정값 하나를 몸 기록에 넣어요.
+   체중 가져오기 — 아이폰 '건강' 앱에서 내보낸 파일(내보내기.zip / export.zip / .xml) 또는 붙여 넣은 목록
+   - 건강 앱 파일에서 '체중(BodyMass)' 기록만 골라, 날짜마다 하루 값 하나(기본: 아침 값)를 몸 기록에 넣어요.
    - 파일은 이 기기 안에서 조금씩 읽기만 하고 서버로 보내지 않아요. 저장되는 건 날짜별 체중뿐이에요.
    - 이미 적은 허리둘레·안정시 심박수는 건드리지 않고, 이미 적힌 다른 체중은 기본적으로 그대로 둬요.
    =============================================================== */
@@ -3157,7 +3157,7 @@ function plBiTake(acc, tag){
   if(kg<20 || kg>300){ acc.badValue++; return; }
   if(acc.recs.length>=PL_BI_MAX_RECS){ acc.over++; return; }
   const src = (plBiUnxml(at.sourceName||'').trim() || '(이름 없음)').slice(0, 60);
-  acc.recs.push([src, m[1], m[2], Math.round(kg*10)/10]);
+  acc.recs.push([src, m[1], m[2], Math.round(kg*100)/100]);
 }
 
 // 읽어 온 글자 한 조각을 훑어서 체중 기록을 모아요. 조각 끝에 걸린 태그는 다음 조각과 이어서 처리해요.
@@ -3251,7 +3251,7 @@ async function plBiZipEntry(file){
   const cd = await plBiBytes(file, cdOff, cdOff + cdSize);
   const c = new DataView(cd.buffer, cd.byteOffset, cd.byteLength);
   const td = new TextDecoder('utf-8');
-  let p = 0, best = null;
+  let p = 0, exact = null, other = null;
   while(p + 46 <= cd.length && c.getUint32(p, true)===0x02014b50){
     const flags = c.getUint16(p+8, true), method = c.getUint16(p+10, true);
     let csize = c.getUint32(p+20, true), usize = c.getUint32(p+24, true), lho = c.getUint32(p+42, true);
@@ -3269,9 +3269,17 @@ async function plBiZipEntry(file){
       }
       q += 4 + sz;
     }
-    if(/(^|\/)export\.xml$/i.test(name) && (!best || usize>best.usize)) best = { name:name, flags:flags, method:method, csize:csize, usize:usize, lho:lho };
+    // 건강 데이터 본체는 보통 export.xml인데, 한국어 아이폰은 '내보내기.xml'처럼 이름이 바뀌어요.
+    // 그래서 이름이 export.xml이면 그걸, 아니면 임상 문서(…_cda.xml)·맥 부속 파일을 뺀 .xml 중 가장 큰 것을 골라요.
+    const base = name.slice(name.lastIndexOf('/') + 1);
+    if(/\.xml$/i.test(base) && !/_cda\.xml$/i.test(base) && base.charAt(0)!=='.' && !/(^|\/)__MACOSX\//i.test(name)){
+      const ent = { name:name, flags:flags, method:method, csize:csize, usize:usize, lho:lho };
+      if(/^export\.xml$/i.test(base)){ if(!exact || usize>exact.usize) exact = ent; }
+      else if(!other || usize>other.usize) other = ent;
+    }
     p += 46 + nl + xl + cl;
   }
+  const best = exact || other;
   if(!best) throw plBiErr('no-export-xml');
   if(best.flags & 1) throw plBiErr('zip-encrypted');
   if(best.method!==0 && best.method!==8) throw plBiErr('zip-unsupported');
@@ -3368,17 +3376,50 @@ function plBiPickSource(sources){
   return (hit.length ? hit[0] : sources[0]).name;
 }
 
-// 날짜마다 그날 첫 측정값 하나 (src가 '*'이면 모든 출처 합쳐서)
-function plBiDays(recs, src){
-  const best = new Map();
+// 날짜마다 하루 값 하나 (src가 '*'이면 모든 출처 합쳐서)
+//  mode 'morning': 오전 4~11시에 잰 값 중 가장 이른 값(그 시간에 잰 값이 없으면 그날 첫 값)
+//       'first'  : 그날 첫 측정값
+//       'avg'    : 그날 측정값의 평균
+//  (한밤중에 잰 값은 전날 저녁 체중에 가까워서, 아침 값과 1kg 가까이 차이 나기도 해요)
+function plBiDays(recs, src, mode){
+  const byDate = new Map();
   recs.forEach(function(r){
     if(src!=='*' && r[0]!==src) return;
-    const cur = best.get(r[1]);
-    if(!cur || r[2]<cur.t) best.set(r[1], { t:r[2], kg:r[3] });
+    let a = byDate.get(r[1]);
+    if(!a){ a = []; byDate.set(r[1], a); }
+    a.push(r);
   });
   const out = [];
-  best.forEach(function(v, date){ out.push({ date:date, kg:v.kg }); });
+  byDate.forEach(function(a, date){
+    let kg;
+    if(mode==='avg'){
+      kg = a.reduce(function(s, r){ return s + r[3]; }, 0) / a.length;
+    } else {
+      let pool = a;
+      if(mode==='morning'){
+        const m = a.filter(function(r){ return r[2]==='' || (r[2]>='04:00:00' && r[2]<'11:00:00'); });
+        if(m.length) pool = m;
+      }
+      let best = pool[0];
+      pool.forEach(function(r){ if(r[2]<best[2]) best = r; });
+      kg = best[3];
+    }
+    out.push({ date:date, kg:Math.round(kg*10)/10 });
+  });
   return out.sort(function(a, b){ return a.date<b.date ? -1 : (a.date>b.date ? 1 : 0); });
+}
+
+// 같은 날 두 번 이상 잰 날 수 (오늘까지)
+function plBiMultiDays(recs, src, today){
+  const cnt = new Map();
+  recs.forEach(function(r){
+    if(src!=='*' && r[0]!==src) return;
+    if(today && r[1]>today) return;
+    cnt.set(r[1], (cnt.get(r[1])||0) + 1);
+  });
+  let n = 0;
+  cnt.forEach(function(c){ if(c>1) n++; });
+  return n;
 }
 
 function plBiPlan(days, bodyLogs, today){
@@ -3419,7 +3460,7 @@ function plBiWritable(plan, replace){
 }
 
 function plBiRecompute(st){
-  st.plan = plBiPlan(plBiDays(st.recs, st.src), PL_BODYLOGS, plToday());
+  st.plan = plBiPlan(plBiDays(st.recs, st.src, st.mode), PL_BODYLOGS, plToday());
 }
 
 // ── 화면 ─────────────────────────────────────────────────────
@@ -3428,13 +3469,13 @@ function plBiMD(iso){ return iso.slice(5).replace('-', '/'); }
 
 function plBiMsg(code){
   const m = {
-    'not-zip': 'zip 파일을 열지 못했어요. 건강 앱에서 내보낸 export.zip이 맞는지 확인해 주세요.',
-    'no-export-xml': '이 zip 안에서 건강 데이터(export.xml)를 찾지 못했어요. 건강 앱의 ‘모든 건강 데이터 내보내기’로 만든 export.zip을 골라 주세요.',
+    'not-zip': 'zip 파일을 열지 못했어요. 건강 앱에서 내보낸 zip(내보내기.zip 또는 export.zip)이 맞는지 확인해 주세요.',
+    'no-export-xml': '이 zip 안에서 건강 데이터 파일(내보내기.xml 또는 export.xml)을 찾지 못했어요. 건강 앱의 ‘모든 건강 데이터 내보내기’로 만든 zip을 골라 주세요.',
     'zip-encrypted': '암호가 걸린 zip은 열 수 없어요.',
-    'zip-unsupported': '이 zip의 압축 방식은 지원하지 않아요. 파일 앱에서 export.zip을 눌러 압축을 푼 뒤, 안에 있는 export.xml을 골라 주세요.',
-    'no-decompress': '이 폰의 브라우저는 zip을 바로 열지 못해요. 파일 앱에서 export.zip을 눌러 압축을 푼 뒤, 안에 있는 export.xml을 골라 주세요.',
-    'zip-corrupt': '파일이 끝까지 받아지지 않았거나 손상된 것 같아요. 건강 앱에서 다시 내보내 주세요. 계속 안 되면 파일 앱에서 export.zip을 눌러 압축을 푼 뒤, 안에 있는 export.xml을 골라 주세요.',
-    'not-health': '건강 앱 파일(export.zip, export.xml)이나 날짜·체중 목록 파일이 아닌 것 같아요.',
+    'zip-unsupported': '이 zip의 압축 방식은 지원하지 않아요. 파일 앱에서 zip을 눌러 압축을 푼 뒤, 안에 있는 내보내기.xml(또는 export.xml)을 골라 주세요.',
+    'no-decompress': '이 폰의 브라우저는 zip을 바로 열지 못해요. 파일 앱에서 zip을 눌러 압축을 푼 뒤, 안에 있는 내보내기.xml(또는 export.xml)을 골라 주세요.',
+    'zip-corrupt': '파일이 끝까지 받아지지 않았거나 손상된 것 같아요. 건강 앱에서 다시 내보내 주세요. 계속 안 되면 파일 앱에서 zip을 눌러 압축을 푼 뒤, 안에 있는 내보내기.xml(또는 export.xml)을 골라 주세요.',
+    'not-health': '건강 앱 파일(내보내기.zip, export.zip, .xml)이나 날짜·체중 목록 파일이 아닌 것 같아요.',
     'read-failed': '파일을 읽는 도중 문제가 생겼어요. 다시 시도해 주세요.'
   };
   return m[code] || '파일을 읽는 중 문제가 생겼어요. 다시 시도해 주세요.';
@@ -3449,7 +3490,7 @@ function plBiStartHtml(){
     '<ol class="bi-steps">'+
       '<li><b>건강</b> 앱을 열고 오른쪽 위 내 사진(또는 이니셜)을 눌러요.</li>'+
       '<li>맨 아래 <b>모든 건강 데이터 내보내기</b> → <b>내보내기</b>를 누르고, 다 만들어지면 <b>파일에 저장</b>을 골라요. 몇 분 걸릴 수 있어요.</li>'+
-      '<li>아래 <b>파일 고르기</b>에서 저장한 <b>export.zip</b>을 골라요.</li>'+
+      '<li>아래 <b>파일 고르기</b>에서 저장한 <b>내보내기.zip</b>(영어 설정이면 <b>export.zip</b>)을 골라요.</li>'+
     '</ol>'+
     plBiFileLabel('파일 고르기')+
     '<div class="bi-note">파일은 이 폰 안에서만 읽고 어디로도 보내지 않아요. 건강 정보가 모두 들어 있으니, 가져온 뒤에는 지워도 돼요.</div>'+
@@ -3479,6 +3520,7 @@ function plBiErrorHtml(st){
 
 function plBiPreviewHtml(st){
   const p = st.plan;
+  const todayIso = plToday();
   const w = plBiWritable(p, st.replace);
   const n = w.list.length;
   let h = '';
@@ -3492,12 +3534,20 @@ function plBiPreviewHtml(st){
     const opts = st.sources.map(function(s, i){
       return '<option value="'+i+'"'+(s.name===st.src ? ' selected' : '')+'>'+plEsc(s.name)+' · '+s.days+'일</option>';
     });
-    const todayIso = plToday();
     opts.push('<option value="*"'+(st.src==='*' ? ' selected' : '')+'>모두 합치기 · '+plBiDays(st.recs, '*').filter(function(d){ return d.date<=todayIso; }).length+'일</option>');
     h += '<div class="form-group"><label class="form-lbl" for="pl-bi-src">어느 기록을 가져올까요?</label>'+
       '<select class="form-input" id="pl-bi-src" onchange="plBiSelectSource(this.value)">'+opts.join('')+'</select></div>';
   } else {
     h += '<div class="bi-note">출처: '+plEsc(st.sources[0].name)+'</div>';
+  }
+  const multi = plBiMultiDays(st.recs, st.src, todayIso);
+  const mode = (st.mode==='first' || st.mode==='avg') ? st.mode : 'morning';
+  if(multi){
+    h += '<div class="form-group"><label class="form-lbl" for="pl-bi-mode">하루에 여러 번 쟀을 때 (그런 날 '+multi+'일)</label>'+
+      '<select class="form-input" id="pl-bi-mode" onchange="plBiSelectMode(this.value)">'+
+      '<option value="morning"'+(mode==='morning' ? ' selected' : '')+'>아침 값 (오전 4~11시)</option>'+
+      '<option value="first"'+(mode==='first' ? ' selected' : '')+'>그날 첫 측정값</option>'+
+      '<option value="avg"'+(mode==='avg' ? ' selected' : '')+'>그날 평균</option></select></div>';
   }
   const row = function(label, count){ return '<div><span>'+label+'</span><b>'+count+'일</b></div>'; };
   h += '<div class="bi-rows">'+row('새로 넣기', p.add.length)+
@@ -3517,7 +3567,10 @@ function plBiPreviewHtml(st){
     h += '<div class="sec-label" style="margin-top:14px;">가져올 기록 (최근 '+recent.length+'일)</div><div class="bi-rows">'+
       recent.map(function(d){ return '<div><span>'+plEsc(plBiMD(d.date))+'</span><b>'+d.kg.toFixed(1)+' kg</b></div>'; }).join('')+'</div>';
   }
-  const notes = ['하루에 여러 번 쟀다면 그날 첫 측정값만 써요.'];
+  const notes = [];
+  if(multi) notes.push(mode==='avg' ? '하루에 여러 번 쟀다면 그날 측정값의 평균을 써요.'
+    : mode==='first' ? '하루에 여러 번 쟀다면 그날 첫 측정값을 써요.'
+    : '하루에 여러 번 쟀다면 오전 4~11시에 잰 값 중 가장 이른 값을 써요. 그 시간에 잰 값이 없는 날은 그날 첫 값을 써요.');
   if(w.trimmed) notes.push('저장 공간을 위해 오래된 '+w.trimmed+'일은 건너뛰었어요.');
   if(p.future) notes.push('미래 날짜 '+p.future+'일은 건너뛰었어요.');
   if(st.stats && st.stats.skipped){
@@ -3525,7 +3578,7 @@ function plBiPreviewHtml(st){
     if(st.stats.samples && st.stats.samples.length) t += ' 예) '+st.stats.samples.join(' / ');
     notes.push(t);
   }
-  h += '<div class="bi-note">'+notes.map(plEsc).join('<br>')+'</div>';
+  if(notes.length) h += '<div class="bi-note">'+notes.map(plEsc).join('<br>')+'</div>';
   if(n) h += '<button type="button" class="btn-primary" onclick="plBiApply()">'+n+'일 가져오기</button>';
   else h += '<div class="bi-err">새로 넣을 체중이 없어요. (이미 모두 들어 있거나, 건너뛴 값뿐이에요)</div>';
   h += '<button type="button" class="btn-secondary" onclick="plBiRestart()">다른 파일 고르기</button>';
@@ -3554,7 +3607,7 @@ function plBiProgress(p){
 function plOpenBodyImport(){
   if(!PL_LOADED || PL_LOAD_FAILED){ plToast('기록을 아직 불러오지 못했어요. 잠시 뒤에 다시 눌러주세요'); return; }
   if(PL_BI && PL_BI.ctl) PL_BI.ctl.cancelled = true;
-  PL_BI = { stage:'start', msg:'', progress:0, file:'', recs:null, stats:null, sources:[], src:null, replace:false, plan:null, ctl:null };
+  PL_BI = { stage:'start', msg:'', progress:0, file:'', recs:null, stats:null, sources:[], src:null, mode:'morning', replace:false, plan:null, ctl:null };
   plCloseBodyLog();
   plBiRender();
   document.getElementById('pl-bimport-overlay').classList.add('open');
@@ -3569,7 +3622,7 @@ function plCloseBodyImport(){
 function plBiRestart(){
   const st = PL_BI; if(!st) return;
   if(st.ctl) st.ctl.cancelled = true;
-  st.stage = 'start'; st.msg = ''; st.recs = null; st.plan = null; st.stats = null; st.sources = []; st.src = null; st.replace = false; st.ctl = null;
+  st.stage = 'start'; st.msg = ''; st.recs = null; st.plan = null; st.stats = null; st.sources = []; st.src = null; st.mode = 'morning'; st.replace = false; st.ctl = null;
   plBiRender();
 }
 
@@ -3608,6 +3661,7 @@ function plBiSetResult(st, out){
   st.recs = out.recs;
   st.sources = plBiSources(out.recs, plToday());
   st.src = plBiPickSource(st.sources);
+  st.mode = 'morning';
   st.replace = false;
   st.stage = 'preview';
   plBiRecompute(st);
@@ -3655,6 +3709,15 @@ function plBiSelectSource(v){
   if(!st || st.stage!=='preview') return;
   if(v==='*') st.src = '*';
   else if(st.sources[+v]) st.src = st.sources[+v].name;
+  st.replace = false;
+  plBiRecompute(st);
+  plBiRender();
+}
+
+function plBiSelectMode(v){
+  const st = PL_BI;
+  if(!st || st.stage!=='preview') return;
+  st.mode = (v==='first' || v==='avg') ? v : 'morning';
   st.replace = false;
   plBiRecompute(st);
   plBiRender();
