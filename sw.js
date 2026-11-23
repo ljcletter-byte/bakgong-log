@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bakdong-log-v4';
+const CACHE_NAME = 'bakdong-log-v5';
 const ASSETS = ['./index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', function(event){
